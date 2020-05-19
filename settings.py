@@ -7,7 +7,7 @@ cuts = 4
 test_set_length = len(glob.glob('./data/test/300_real_test/*.png'))
 test_size = cuts * test_set_length
 uncertainty_runs = 5
-val_size = 1000
+val_size = 300
 batch_size = 10
 
 real_or_fake = 'fake'
