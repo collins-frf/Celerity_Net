@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 from unet import *
 
+
 def plot_for_gif(imgmean, labelmean, predmean, diffmean, i, pred_list):
 
     X = np.linspace(zeroline, crosshore_distance_meters, crosshore_distance_meters-zeroline)
@@ -227,6 +228,19 @@ class Predictor(object):
             imgs_mask_test = model.predict(imgdatas, batch_size=1, verbose=1)
             np.save('./results/mask_test.npy', imgs_mask_test)
 
+            #gradcam try
+            last_conv = model.get_layer('conv2d_23')
+            grads = K.gradients(model.output[:, 512], last_conv.output)[0]
+            pooled_grads = K.mean(grads, axis=(0,1,2))
+            iterate = K.function([model.input], [pooled_grads, last_conv.output[0]])
+            pooled_grads_value, conv_layer_output = iterate([imgdatas[0]])
+            for i in range(512):
+                conv_layer_output[:, :, i] *= pooled_grads_value[i]
+            heatmap = np.mean(conv_layer_output, axis=-1)
+            heatmap = np.maximum(heatmap, 0)
+            heatmap /= np.max(heatmap)
+            plt.imshow(heatmap)
+            plt.show()
             #make a prediction on the entire test set and return
             #mean mae, mean bias, 10%tile error, 50%, 65%, 80%, 90%, greatest error,
             #also return the 2d versions of pred, bias, and mae for the test set
@@ -325,13 +339,9 @@ class Predictor(object):
         while i < len(preds):
             #grab first image, prediction image, and label
             img = imgs[i]
-            print(np.shape(img))
             img = img[:, :, :-1]
-            print(np.shape(img))
             img = img[:, :img_cols, :]
-            print(np.shape(img))
             img = np.mean(img, axis=2)
-            print(np.shape(img))
             img = cv2.resize(img, (bathy_cols, bathy_rows), interpolation=cv2.INTER_AREA)
             #img = np.expand_dims(img, axis=-1)
             pred = preds[i]

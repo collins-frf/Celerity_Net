@@ -191,7 +191,16 @@ class myUnet(object):
         model = keras.models.Model(inputs=inputs, outputs=conv10)
         model.compile(optimizer=optimizer, loss=loss, metrics=[absolute_error, pred_max, pred_min])
 
+        #layers_name = ['dropout', 'dropout_1', 'dropout_2', 'dropout_3', 'dropout_4', 'dropout_5', 'dropout_6',
+        #                'conv2d_23']
+        #outputs = [layer.output for layer in model.layers if layer.name in layers_name]
+
+        #model = keras.models.Model(inputs=inputs, outputs=outputs)
+        #model.compile(optimizer=optimizer, loss=loss, metrics=[absolute_error, pred_max, pred_min])
+
         model.summary()
+
+        tf.summary
         return model
 
     def get_batch(self, timex_dataset, train_flag):
@@ -340,7 +349,7 @@ class myUnet(object):
         model = self.load_model()
         loss = []
         #train model for an epoch
-        self.validate(0, timex_dataset, model)
+        #self.validate(0, timex_dataset, model)
         for epoch in range(epoch_no):
             print(epoch)
             epoch_mean_loss = []

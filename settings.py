@@ -9,7 +9,7 @@ test_size = cuts * test_set_length
 uncertainty_runs = 2
 val_size = 300
 batch_size = 10
-filters = 128
+filters = 64
 real_or_fake = 'fake'
 snap = True
 activation = 'sigmoid'
@@ -45,6 +45,8 @@ real_image_original_height = 1334
 real_image_original_width = 334
 
 #to get to 1:1 cell size
+gen_image_resize_height = 361*5
+gen_image_resize_width = 194*5
 real_image_resize_height = 2000
 real_image_resize_width = 500
 real_bathy_resize_height = 2000
@@ -55,12 +57,14 @@ UAS_image_resize_width = 500
 #select column to grab square image from in 1500x500 image/label
 north_bound = [np.random.randint(0, 1488) for i in range(3500)]
 
+#shift by this much
+duckgen_offset = 65
+synthetic_offset = 165
+
 #shift image by this much
 real_image_offset = 0
 UAS_cell_offset = 100
 #shift label by this much
-duckgen_cell_offset = 0
-synthetic_cell_offset = 12
 real_cell_offset = 0
 UAS_bathy_offset = 80
 

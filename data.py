@@ -1,6 +1,7 @@
 #all the imports for every file
 from astropy.visualization.mpl_normalize import ImageNormalize
 from astropy.visualization import LogStretch
+from kerasgradcam.pyimagesearch.gradcam import *
 from losses import *
 from PIL import Image
 from random import *
@@ -376,28 +377,28 @@ def find_bathy(self, img_path, idx):
         label_path = self.duckgen_bathy[index]
         label = loadmat(label_path)
         label = label['B']
-        label = cv2.resize(label, (tiff_height, tiff_width), interpolation=cv2.INTER_CUBIC)
+        label = cv2.resize(label, (gen_image_resize_height, gen_image_resize_width), interpolation=cv2.INTER_CUBIC)
         label = cv2.rotate(label, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
         new_label = np.zeros((512, 512))
-        north = north_bound[idx] - 925 #subtract length difference from real image (2000->1075 for gen tiff)
+        north = north_bound[idx] - 200 #subtract length difference from real image (2000->1805 for gen tiff)
         if north < 0:
             north = 0
         south = north + img_rows
-        label = label[north:south, duckgen_cell_offset:(duckgen_cell_offset + img_cols)]
+        label = label[north:south, duckgen_offset:(duckgen_offset + img_cols)]
         new_label[:, :img_cols] = label
         label = new_label
     else:
         label_path = self.synthetic_bathy[index]
         label = loadmat(label_path)
         label = label['B']
-        label = cv2.resize(label, (tiff_height, tiff_width), interpolation=cv2.INTER_CUBIC)
+        label = cv2.resize(label, (gen_image_resize_height, gen_image_resize_width), interpolation=cv2.INTER_CUBIC)
         label = cv2.rotate(label, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
         new_label = np.zeros((512, 512))
-        north = north_bound[idx] - 925 #subtract length difference from real image (2000->1075 for gen tiff)
+        north = north_bound[idx] - 200 #subtract length difference from real image (2000->1805 for gen tiff)
         if north < 0:
             north = 0
         south = north + img_rows
-        label = label[north:south, synthetic_cell_offset:(synthetic_cell_offset+img_cols)]
+        label = label[north:south, synthetic_offset:(synthetic_offset+img_cols)]
         new_label[:, :img_cols] = label
         label = new_label
 
@@ -421,12 +422,17 @@ def cycle_bathyno(self, year, index):
 
 
 # load tif image, histogram equalize to real if fake, and crop/resize to input into network
-def load_image(img_path, real, UAS, duckgen, idx):
+def load_image(img_path, real, UAS, duckgen, idx, issnap):
+
+    # load tiff, else load png
     try:
         image = tif.imread(img_path)
+        if issnap:
+            image = image[:, :img_cols, :]
     except:
         image = np.asarray(Image.open(img_path))
 
+    # crop & interpolation for argus imagery to randomly select a section and get to 1 cell -> 1m resolution
     if real:
         image = cv2.resize(image, (real_image_resize_height, real_image_resize_width), interpolation=cv2.INTER_CUBIC)
         image = cv2.rotate(image, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -434,6 +440,8 @@ def load_image(img_path, real, UAS, duckgen, idx):
         south = north_bound[idx] + img_rows
         new_image[:, :img_cols, :] = image[north_bound[idx]:south, real_image_offset:(real_image_offset+img_cols), :3]
         image = new_image
+
+    # crop & interpolation for UAS imagery to randomly select a section and get to 1 cell -> 1m resolution
     elif UAS:
         image = cv2.resize(image, (UAS_image_resize_width, UAS_image_resize_height), interpolation=cv2.INTER_CUBIC)
         new_image = np.zeros((512, 512, 3))
@@ -443,13 +451,18 @@ def load_image(img_path, real, UAS, duckgen, idx):
         g_reference = tif.imread('./data/train/timex/13_rbathy_WC_1.tiff')
         g_matched = match_histograms(g_source, g_reference)
         image = g_matched.astype('int16')
+
+    # crop & interpolation settings for synthetic imagery of duck,nc to randomly select a section and
+    # get to 1 cell -> 1m resolution, also histogram matching with a random argus image
     elif duckgen:
         new_image = np.zeros((512, 512, 3))
-        north = north_bound[idx] - 925
+        north = north_bound[idx] - 200
         if north < 0:
             north = 0
         south = north + img_rows
-        image = image[north:south, duckgen_cell_offset:(duckgen_cell_offset+img_cols)]
+        image = np.array(image, dtype='uint8')
+        image = cv2.resize(image, (gen_image_resize_width, gen_image_resize_height), interpolation=cv2.INTER_CUBIC)
+        image = image[north:south, duckgen_offset:(duckgen_offset+img_cols)]
         new_image[:, :img_cols, :] = image
         image = new_image
         g_source = image
@@ -468,13 +481,18 @@ def load_image(img_path, real, UAS, duckgen, idx):
 
         g_matched = match_histograms(g_source, g_reference)
         image = g_matched.astype('int16')
+
+    # crop & interpolation settings for completely synthetic imagery to randomly select a section and
+    # get to 1 cell -> 1m resolution, also histogram matching with a random argus image
     else:
         new_image = np.zeros((512, 512, 3))
-        north = north_bound[idx] - 925
+        north = north_bound[idx] - 200
         if north < 0:
             north = 0
         south = north + img_rows
-        image = image[north:south, synthetic_cell_offset:(synthetic_cell_offset+img_cols)]
+        image = np.array(image, dtype='uint8')
+        image = cv2.resize(image, (gen_image_resize_width, gen_image_resize_height), interpolation=cv2.INTER_CUBIC)
+        image = image[north:south, synthetic_offset:(synthetic_offset+img_cols)]
         new_image[:, :img_cols, :] = image
         image = new_image
         g_source = image
@@ -499,33 +517,43 @@ def load_image(img_path, real, UAS, duckgen, idx):
 
     return image
 
-#load tif snap in same method as load_image
+
+# load tif snap in same method as load_image
 def load_snap(img_path, real, UAS, duckgen, idx):
+
+    #change timex in folder to snap
     timex_index = img_path.find("timex")
     img_path = list(img_path)
     img_path[timex_index:(timex_index+4)] = 'snap'
     img_path = np.delete(img_path, (timex_index+5))
     img_path[(timex_index+4)] = '/'
     img_path = "".join(img_path)
-    snap = load_image(img_path, real, UAS, duckgen, idx)
+    issnap=True
+    #load snap w/ same method used to load timex image
+    snap = load_image(img_path, real, UAS, duckgen, idx, issnap)
     return snap
 
 
 # add channel to input sample of slope, hs, d, f
 def add_channel(label, hs, d, f):
-    # find the 0 farthest to the right for each row
-    slopeindex = np.sum(np.any(label > 0, axis=0))
-    shoreslope = (np.mean(label[:, slopeindex]) - np.mean(label[:, img_cols])) / (img_cols)
-    #make shoreslope a number that falls between 0->1
-    shoreslope = -shoreslope*100
+    # find the -.01 farthest to the right for each row
+    slopeindex = np.sum(np.any(label > -.01, axis=0))
+    shoreline_elevation = np.mean(label[:, slopeindex])
+    offshore_elevation = np.mean(label[:, (img_cols-1)])
+    #divide by constant img_cols instead of (img_cols-slopeindex) to introduce noise into the slope "guess"
+    shoreslope = (shoreline_elevation - offshore_elevation) / (img_cols)
+    #apply a stretch of 10 to get values closer to median of .5 of other addtl inputs
+    shoreslope = shoreslope*10
 
     # fill shoreline with 0s
     label[:, :zeroline] = 0
+
+    #fill channel with shoreslope value
     labelslope = np.full(label.shape, shoreslope)
+    #optionally add offshore wave conditions to each quadrant
     #labelslope[:256, 256:] = d
     #labelslope[256:, 256:] = hs
     #labelslope[256:, :256] = f
-
     labelslope = np.expand_dims(labelslope, axis=0)
     labelslope = np.expand_dims(labelslope, axis=-1)
     return labelslope
@@ -561,6 +589,7 @@ class TimexDataset(Dataset):
         self.duckgen_bathy.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
         self.measured_bathy.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
 
+        #use idx to identify to pull train or test data
         img_path, idx, test = train_or_test(self, idx)
 
         #if testing on the one UAV image we have:
@@ -569,25 +598,46 @@ class TimexDataset(Dataset):
         else:
             UAS = False
             label, real, duckgen = find_bathy(self, img_path, idx)
+
+        #find wave conditions from lookup table
         hs, d, f = set_cond(img_path)
-        image = load_image(img_path, real, UAS, duckgen, idx)
+
+        #load timex image
+        image = load_image(img_path, real, UAS, duckgen, idx, issnap=False)
+
+        #load snapshot image if desired
         if snap:
             snap_image = load_snap(img_path, real, UAS, duckgen, idx)
+
+        #create an additional channel with slope, wave height direction and period information in each quadrant
         info_channel = add_channel(label, hs, d, f)
 
+        #add snap to 2nd channel if desired
         if snap:
             image = np.concatenate((image, snap_image), axis=3)
+
+        #add additional channel to image
         image = np.concatenate((image, info_channel), axis=3)
+
+        #convert to float32
         image = np.full(image.shape, image, dtype='float32')
+
+        #normalize the grayscale channels
         image[:, :, :, :2] = image[:, :, :, :2] / 255
+
+        #add zeros in image/label from the shoreline according to zeroline setting
         image[:, :, :zeroline, :] = 0
         label[:, :zeroline] = 0
-        #randomly flip labels horizontally
+
+        #randomly flip inputs horizontally to increase training data
         randomseed = random()
-        if (randomseed > .5) & (test == False):
+        if (randomseed > .5) & (not test):
             image = np.flip(image, axis=1)
             label = np.flip(label, axis=0)
+
         sample = {'image': image, 'label': label}
+
+        #plot for visualization
         """print(img_path)
         fig = plt.figure()
         X = np.linspace(0, img_cols, img_cols)
