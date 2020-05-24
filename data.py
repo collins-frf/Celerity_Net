@@ -29,8 +29,9 @@ import tifffile as tif
 import torch
 import torch.nn as nn
 
-#if using the one UAS image we have do this
-def UAS_handle():
+
+# if using the one UAS image for test
+def uas_handle():
     label_path = './z2017-02-28T00.15.00.Z'
     # not a real or duckgen image
     real = False
@@ -43,7 +44,7 @@ def UAS_handle():
                        interpolation=cv2.INTER_CUBIC)
     label = cv2.rotate(label, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
     new_label = np.zeros((512, 512))
-    label = label[370:882, UAS_bathy_offset:(UAS_bathy_offset + img_cols)]
+    label = label[370:882, UAS_cell_offset:(UAS_cell_offset + img_cols)]
     new_label[:, :img_cols] = label
     label = new_label
     return real, duckgen, UAS, label
@@ -291,6 +292,7 @@ def month_to_num(index, str_index):
 
 # load either train or test files based on index
 def train_or_test(self, idx):
+    # idx is >10000 if its test, derived from the flag given to unet.py/get_batch
     img_path = ''
     if idx < 10000:
         test = False
@@ -317,7 +319,7 @@ def find_bathy(self, img_path, idx):
     duckgen = False
     bathy_index = img_path.find("_bathy_")
 
-    #if bathy is not in filename, means either rbathy or real image
+    # if bathy is not in filename, means either rbathy or real image
     if bathy_index == -1:
         duckgen = True
         bathy_index = img_path.find("_rbathy_")
@@ -337,7 +339,7 @@ def find_bathy(self, img_path, idx):
             if index[1] == '\\':
                 index = index[2]
             index = int(index)
-    #if its bathy just load it up
+    # if its bathy just load it up
     else:
         index = img_path[:bathy_index]
         index = index[-3:]
@@ -348,6 +350,7 @@ def find_bathy(self, img_path, idx):
             index = index[2]
         index = int(index)
 
+    # crop and interpolation settings for real duckgen and synthetic images, see load_image for more comments
     if real:
         label_path = [i for i in self.measured_bathy if year in i]
         label_path = [i for i in label_path if str_index in i]
@@ -402,6 +405,7 @@ def find_bathy(self, img_path, idx):
         new_label[:, :img_cols] = label
         label = new_label
 
+    # don't use any values above 0, so slope of shore cannot be used during training or testing
     label = np.where((label > 0), 0, label)
     return label, real, duckgen
 
@@ -445,7 +449,7 @@ def load_image(img_path, real, UAS, duckgen, idx, issnap):
     elif UAS:
         image = cv2.resize(image, (UAS_image_resize_width, UAS_image_resize_height), interpolation=cv2.INTER_CUBIC)
         new_image = np.zeros((512, 512, 3))
-        new_image[:, :img_cols, :] = image[200:712, UAS_cell_offset:(UAS_cell_offset+img_cols), :3]
+        new_image[:, :img_cols, :] = image[200:712, UAS_image_offset:(UAS_image_offset+img_cols), :3]
         image = new_image
         g_source = image
         g_reference = tif.imread('./data/train/timex/13_rbathy_WC_1.tiff')
@@ -573,7 +577,6 @@ class TimexDataset(Dataset):
 
         self.transform = transform
 
-
     def __getitem__(self, idx):
         return self.load_file(idx)
 
@@ -582,7 +585,6 @@ class TimexDataset(Dataset):
             return len(self.generated_training)
         if real_or_fake == 'real':
             return len(self.argus_training)
-
 
     def load_file(self, idx):
         self.synthetic_bathy.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
@@ -594,7 +596,7 @@ class TimexDataset(Dataset):
 
         #if testing on the one UAV image we have:
         if img_path == './data/test\Combo_Timex.png':
-            real, duckgen, UAS, label = UAS_handle()
+            real, duckgen, UAS, label = uas_handle()
         else:
             UAS = False
             label, real, duckgen = find_bathy(self, img_path, idx)

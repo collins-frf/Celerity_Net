@@ -5,7 +5,7 @@ import glob
 epoch_no = 1000
 cuts = 1
 test_set_length = len(glob.glob('./data/test/real_test/*.png'))
-test_size = cuts * test_set_length
+test_size = int(cuts * test_set_length)
 uncertainty_runs = 2
 val_size = 300
 batch_size = 10
@@ -16,8 +16,8 @@ activation = 'sigmoid'
 loss = "mean_absolute_error"
 lr=.0001
 optimizer = tf.keras.optimizers.Nadam(lr=lr, beta_1=.9, beta_2=.999, epsilon=1e-7, schedule_decay=.004)
-#name = loss + str(lr) +"_"+ activation +"_snap_" + str(filters)
-name = "mean_absolute_error0.0001sigmoidsnap+64"
+name = loss + str(lr) +"_"+ activation +"_snap_" + str(filters)
+#name = "mean_absolute_error0.0001sigmoidsnap+64"
 logs_path = "./runs/" + name
 
 ### interpolation settings
@@ -63,10 +63,10 @@ synthetic_offset = 165
 
 #shift image by this much
 real_image_offset = 0
-UAS_cell_offset = 100
+UAS_image_offset = 100
 #shift label by this much
 real_cell_offset = 0
-UAS_bathy_offset = 80
+UAS_cell_offset = 80
 
 test_id_offset = 10000
 epoch_no = 1000

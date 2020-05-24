@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 from data import *
 
+
 class myUnet(object):
     def __init__(self):
         self.old_best = 500
@@ -8,7 +9,7 @@ class myUnet(object):
         self.fail_counter = 0
         self.img_rows = 512
         self.img_cols = 512
-        if snap == True:
+        if snap:
             self.bands = 3
         else:
             self.bands = 2
@@ -321,6 +322,8 @@ class myUnet(object):
         return my_model
 
     def validate(self, epoch, timex_dataset, model):
+
+        #evaluate on validation set
         val_train, val_mask_train = self.get_batch(timex_dataset, train_flag='val')
         val_history = model.evaluate(val_train, val_mask_train, verbose=1, batch_size=10)
         self.val_loss = float(val_history[0])
@@ -328,40 +331,54 @@ class myUnet(object):
         with writer.as_default():
             tf.summary.scalar("Val_Loss", val_history[0], step=1)
         writer.flush()
+
+        # if val loss is better than record, save val_loss model
         if self.val_loss < self.old_best:
             print(str(self.old_best) + ' was the old best val_loss. ' + str(
                 self.val_loss) + ' is the new best val loss!')
             self.old_best = self.val_loss
             model.save('./results/'+ name+ 'val_loss.h5', overwrite=True)
             self.fail_counter = 0
+
+        # else reduce learning rate by 1%
         else:
             self.fail_counter += 1
             print("val better fails in a row: " + str(self.fail_counter))
             if self.fail_counter % 1 == 0:
                 print("val loss failed to improve 1 epochs in a row")
                 print("Current LR: " + str(model.optimizer.lr) + "reducing learning rate by 1%")
-                # yo this actually works and carries the lr across load models!
                 tf.keras.backend.set_value(model.optimizer.lr, model.optimizer.lr * .99)
                 print("New LR: " + str(tf.keras.backend.get_value(model.loss)))
 
     def train(self):
         timex_dataset = TimexDataset(Dataset)
         model = self.load_model()
-        loss = []
-        #train model for an epoch
-        #self.validate(0, timex_dataset, model)
+
+        # validate before train
+        self.validate(0, timex_dataset, model)
+
+        # train for epoch_no epochs
         for epoch in range(epoch_no):
             print(epoch)
             epoch_mean_loss = []
+
+            #create summary writer for tensorboard
             writer = tf.summary.create_file_writer(logs_path)
+
+            # for training set size / batch size each epoch
             for i in range(int((len(timex_dataset)-val_size) / batch_size)):
+
+                # get training batch
                 imgdatas, imglabels = self.get_batch(timex_dataset, train_flag='train')
+
+                # train
                 train_history = model.train_on_batch(imgdatas, imglabels)
                 epoch_mean_loss = np.append(epoch_mean_loss, train_history[0])
                 with writer.as_default():
                     tf.summary.scalar("Loss", train_history[0], step=i)
                     tf.summary.scalar("Absolute Loss", train_history[1], step=i)
                     tf.summary.scalar("LR", model.optimizer.lr, step=i)
+
                 print("Batch " + str(i) + "/" + str((len(timex_dataset)-val_size)/batch_size) +
                     " Loss: " + str(train_history[0]) + 
                     " Absolute: " + str(train_history[1]) + 
@@ -369,7 +386,7 @@ class myUnet(object):
                     " Min: " + str(train_history[3]))
             print(" Epoch Loss: " + str(np.mean(epoch_mean_loss)))
             writer.flush()
-            loss = np.append(loss, train_history)
+            #save model at end of each epoch
             model.save('./results/'+ name+ 'iter.h5', overwrite=True)
             self.validate(epoch, timex_dataset, model)
 
@@ -377,8 +394,8 @@ class myUnet(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-ft', '--finetune', action='store_true',
-                        help="print full stats and uncertainty of test set with N passes")
-
+                        help="finetune the network (reduce learning rate and lock down convolutional layers "
+                             "to be untrainable)")
     args = parser.parse_args()
-    myunet = myUnet()
-    myunet.train()
+    unet = myUnet()
+    unet.train()
