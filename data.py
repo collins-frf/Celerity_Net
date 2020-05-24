@@ -431,7 +431,7 @@ def load_image(img_path, real, UAS, duckgen, idx):
         image = cv2.resize(image, (real_image_resize_height, real_image_resize_width), interpolation=cv2.INTER_CUBIC)
         image = cv2.rotate(image, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
         new_image = np.zeros((512, 512, 3))
-        south = north_bound[idx] + img_cols
+        south = north_bound[idx] + img_rows
         new_image[:, :img_cols, :] = image[north_bound[idx]:south, real_image_offset:(real_image_offset+img_cols), :3]
         image = new_image
     elif UAS:
@@ -440,7 +440,7 @@ def load_image(img_path, real, UAS, duckgen, idx):
         new_image[:, :img_cols, :] = image[200:712, UAS_cell_offset:(UAS_cell_offset+img_cols), :3]
         image = new_image
         g_source = image
-        g_reference = tif.imread('./data/timex/13_rbathy_WC_1.tiff')
+        g_reference = tif.imread('./data/train/timex/13_rbathy_WC_1.tiff')
         g_matched = match_histograms(g_source, g_reference)
         image = g_matched.astype('int16')
     elif duckgen:
@@ -496,7 +496,19 @@ def load_image(img_path, real, UAS, duckgen, idx):
     image = np.mean(image, axis=2)
     image = np.expand_dims(image, axis=-1)
     image = np.expand_dims(image, axis=0)
+
     return image
+
+#load tif snap in same method as load_image
+def load_snap(img_path, real, UAS, duckgen, idx):
+    timex_index = img_path.find("timex")
+    img_path = list(img_path)
+    img_path[timex_index:(timex_index+4)] = 'snap'
+    img_path = np.delete(img_path, (timex_index+5))
+    img_path[(timex_index+4)] = '/'
+    img_path = "".join(img_path)
+    snap = load_image(img_path, real, UAS, duckgen, idx)
+    return snap
 
 
 # add channel to input sample of slope, hs, d, f
@@ -521,15 +533,15 @@ def add_channel(label, hs, d, f):
 # dataset class
 class TimexDataset(Dataset):
     def __init__(self, transform=None):
-        self.generated_training = (glob.glob('./data/timex/duckgen+syn/*.tiff'))
-        self.argus_training = sorted(glob.glob('./data/timex/real_2015_2017/*.png'))
+        self.generated_training = (glob.glob('./data/train/duckgen+syn/timex/*.tiff'))
+        self.argus_training = sorted(glob.glob('./data/train/real_2015_2017/timex/*.png'))
 
         self.synthetic_bathy = glob.glob('./data/labels/*.mat')
         self.duckgen_bathy = glob.glob('./data/labels/duckgen_bathy/*.mat')
         self.measured_bathy = glob.glob('./data/labels/measured_bathy/*.mat')
 
-        self.test_generated = sorted(glob.glob('./data/test/fakediff/*.tiff'))
-        self.test_observed = sorted(glob.glob('./data/test/300_real_test/*.png'))
+        self.test_generated = sorted(glob.glob('./data/test/fakediff/duckgen+syn/timex/*.tiff'))
+        self.test_observed = sorted(glob.glob('./data/test/300_real_test/timex/*.png'))
 
         self.transform = transform
 
@@ -559,11 +571,15 @@ class TimexDataset(Dataset):
             label, real, duckgen = find_bathy(self, img_path, idx)
         hs, d, f = set_cond(img_path)
         image = load_image(img_path, real, UAS, duckgen, idx)
+        if snap:
+            snap_image = load_snap(img_path, real, UAS, duckgen, idx)
         info_channel = add_channel(label, hs, d, f)
 
+        if snap:
+            image = np.concatenate((image, snap_image), axis=3)
         image = np.concatenate((image, info_channel), axis=3)
         image = np.full(image.shape, image, dtype='float32')
-        image[:, :, :, 0] = image[:, :, :, 0] / 255
+        image[:, :, :, :2] = image[:, :, :, :2] / 255
         image[:, :, :zeroline, :] = 0
         label[:, :zeroline] = 0
         #randomly flip labels horizontally
@@ -580,19 +596,26 @@ class TimexDataset(Dataset):
         fmt = {}
         for l, s in zip([-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01], cs_labels):
             fmt[l] = s
-        ax0 = fig.add_subplot(1, 2, 1), plt.imshow(image[0, :, :img_cols, 0])
+        ax0 = fig.add_subplot(1, 3, 1), plt.imshow(image[0, :, :img_cols, 0], cmap='Greys_r')
         cs = ax0[0].contour(X, Y, np.where(label[:, :img_cols] > .1, 0, label[:, :img_cols]), vmin=-6, vmax=2, alpha=.5,
                 colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
                 levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
                 linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
                 linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
         ax0[0].clabel(cs, [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01], fmt=fmt, inline_spacing = 2, fontsize='small',)
-        ax1 = fig.add_subplot(1, 2, 2), plt.imshow(label[:, :img_cols], cmap='gist_earth', vmin=-6, vmax=1)
-        cs = ax1[0].contour(X, Y, np.where(label[:, :img_cols] > .1, 0, label[: , :img_cols]), vmin=-6, vmax=2, alpha=1,
+        ax1 = fig.add_subplot(1, 3, 2), plt.imshow(image[0, :, :img_cols, 1], cmap='Greys_r')
+        cs = ax1[0].contour(X, Y, np.where(label[:, :img_cols] > .1, 0, label[:, :img_cols]), vmin=-6, vmax=2, alpha=.5,
                 colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
                 levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
                 linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
                 linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
         ax1[0].clabel(cs, [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01], fmt=fmt, inline_spacing = 2, fontsize='small',)
+        ax2 = fig.add_subplot(1, 3, 3), plt.imshow(label[:, :img_cols], cmap='gist_earth', vmin=-6, vmax=1)
+        cs = ax2[0].contour(X, Y, np.where(label[:, :img_cols] > .1, 0, label[: , :img_cols]), vmin=-6, vmax=2, alpha=1,
+                colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
+                levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
+                linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
+                linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
+        ax2[0].clabel(cs, [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01], fmt=fmt, inline_spacing = 2, fontsize='small',)
         plt.show()"""
         return sample

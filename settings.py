@@ -3,19 +3,21 @@ import glob
 
 # change often - global variables
 epoch_no = 1000
-cuts = 4
-test_set_length = len(glob.glob('./data/test/300_real_test/*.png'))
+cuts = 1
+test_set_length = len(glob.glob('./data/test/real_test/*.png'))
 test_size = cuts * test_set_length
-uncertainty_runs = 5
+uncertainty_runs = 2
 val_size = 300
 batch_size = 10
-
+filters = 128
 real_or_fake = 'fake'
+snap = True
 activation = 'sigmoid'
 loss = "mean_absolute_error"
 lr=.0001
 optimizer = tf.keras.optimizers.Nadam(lr=lr, beta_1=.9, beta_2=.999, epsilon=1e-7, schedule_decay=.004)
-name = loss + str(lr) + activation +"duckgen+syn+newnet64-"
+#name = loss + str(lr) +"_"+ activation +"_snap_" + str(filters)
+name = "mean_absolute_error0.0001sigmoidsnap+64"
 logs_path = "./runs/" + name
 
 ### interpolation settings

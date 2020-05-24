@@ -8,20 +8,23 @@ class myUnet(object):
         self.fail_counter = 0
         self.img_rows = 512
         self.img_cols = 512
-        self.bands = 2
+        if snap == True:
+            self.bands = 3
+        else:
+            self.bands = 2
 
     def get_unet(self):
 
         inputs = tf.keras.layers.Input((self.img_rows, self.img_cols, self.bands))
-        conv1 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(inputs)
+        conv1 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(inputs)
         conv1 = tf.keras.layers.BatchNormalization(trainable=True)(conv1)
-        conv1 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv1)
+        conv1 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv1)
         conv1 = tf.keras.layers.BatchNormalization(trainable=True)(conv1)
         pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(conv1)
 
-        conv2 = tf.keras.layers.Conv2D(128, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool1)
+        conv2 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool1)
         conv2 = tf.keras.layers.BatchNormalization(trainable=True)(conv2)
-        conv2 = tf.keras.layers.Conv2D(128, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv2)
+        conv2 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv2)
         conv2 = tf.keras.layers.BatchNormalization(trainable=True)(conv2)
         drop2 = tf.keras.layers.Dropout(0.1)(conv2, training=True)
         pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop2)
@@ -66,23 +69,23 @@ class myUnet(object):
         conv7 = tf.keras.layers.BatchNormalization(trainable=True)(conv7)
         drop7 = tf.keras.layers.Dropout(0.1)(conv7, training=True)
 
-        up8 = tf.keras.layers.Conv2D(128, 2, activation=activation, padding='same', kernel_initializer='he_normal')(
+        up8 = tf.keras.layers.Conv2D(filters, 2, activation=activation, padding='same', kernel_initializer='he_normal')(
             tf.keras.layers.UpSampling2D(size=(2, 2))(drop7))
         merge8 = tf.keras.layers.concatenate([drop2, up8], axis=3)
 
-        conv8 = tf.keras.layers.Conv2D(128, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge8)
+        conv8 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge8)
         conv8 = tf.keras.layers.BatchNormalization(trainable=True)(conv8)
-        conv8 = tf.keras.layers.Conv2D(128, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv8)
+        conv8 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv8)
         conv8 = tf.keras.layers.BatchNormalization(trainable=True)(conv8)
         drop8 = tf.keras.layers.Dropout(0.1)(conv8, training=True)
 
-        up9 = tf.keras.layers.Conv2D(64, 2, activation=activation, padding='same', kernel_initializer='he_normal')(
+        up9 = tf.keras.layers.Conv2D(filters, 2, activation=activation, padding='same', kernel_initializer='he_normal')(
             tf.keras.layers.UpSampling2D(size=(2, 2))(drop8))
         merge9 = tf.keras.layers.concatenate([conv1, up9], axis=3)
 
-        conv9 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge9)
+        conv9 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge9)
         conv9 = tf.keras.layers.BatchNormalization(trainable=True)(conv9)
-        conv9 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
+        conv9 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
 
         conv9 = tf.keras.layers.Conv2D(1, 3, activation=None, padding='same', kernel_initializer='he_normal')(conv9)
 
@@ -98,90 +101,90 @@ class myUnet(object):
 
         #512
         inputs = tf.keras.layers.Input((self.img_rows, self.img_cols, self.bands))
-        conv1 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(inputs)
+        conv1 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(inputs)
         conv1 = tf.keras.layers.BatchNormalization(trainable=True)(conv1)
-        conv1 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv1)
+        conv1 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv1)
         conv1 = tf.keras.layers.BatchNormalization(trainable=True)(conv1)
         pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(conv1)
 
         #256
-        conv2 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool1)
+        conv2 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool1)
         conv2 = tf.keras.layers.BatchNormalization(trainable=True)(conv2)
-        conv2 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv2)
+        conv2 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv2)
         conv2 = tf.keras.layers.BatchNormalization(trainable=True)(conv2)
-        conv2 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv2)
+        conv2 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv2)
         conv2 = tf.keras.layers.BatchNormalization(trainable=True)(conv2)
         drop2 = tf.keras.layers.Dropout(0.1)(conv2, training=True)
         pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop2)
 
-        #128
-        conv3 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool2)
+        #filters
+        conv3 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool2)
         conv3 = tf.keras.layers.BatchNormalization(trainable=True)(conv3)
-        conv3 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv3)
+        conv3 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv3)
         conv3 = tf.keras.layers.BatchNormalization(trainable=True)(conv3)
-        conv3 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv3)
+        conv3 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv3)
         conv3 = tf.keras.layers.BatchNormalization(trainable=True)(conv3)
         drop3 = tf.keras.layers.Dropout(0.1)(conv3, training=True)
         pool3 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop3)
 
-        #64
-        conv4 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool3)
+        #filters
+        conv4 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool3)
         conv4 = tf.keras.layers.BatchNormalization(trainable=True)(conv4)
-        conv4 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv4)
+        conv4 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv4)
         conv4 = tf.keras.layers.BatchNormalization(trainable=True)(conv4)
-        conv4 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv4)
+        conv4 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv4)
         conv4 = tf.keras.layers.BatchNormalization(trainable=True)(conv4)
         drop4 = tf.keras.layers.Dropout(0.1)(conv4, training=True)
         pool4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop4)
 
         #32
-        conv5 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool4)
+        conv5 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool4)
         conv5 = tf.keras.layers.BatchNormalization(trainable=True)(conv5)
-        conv5 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv5)
+        conv5 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv5)
         conv5 = tf.keras.layers.BatchNormalization(trainable=True)(conv5)
-        conv5 = tf.keras.layers.Conv2DTranspose(64, 3, (2, 2), activation=activation, padding='same',
+        conv5 = tf.keras.layers.Conv2DTranspose(filters, 3, (2, 2), activation=activation, padding='same',
                                               kernel_initializer='he_normal')((conv5))
         conv5 = tf.keras.layers.BatchNormalization(trainable=True)(conv5)
         drop5 = tf.keras.layers.Dropout(0.5)(conv5, training=True)
         merge6 = tf.keras.layers.concatenate([drop4, drop5], axis=3)
 
-        #64
-        conv6 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge6)
+        #filters
+        conv6 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge6)
         conv6 = tf.keras.layers.BatchNormalization(trainable=True)(conv6)
-        conv6 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv6)
+        conv6 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv6)
         conv6 = tf.keras.layers.BatchNormalization(trainable=True)(conv6)
-        conv6 = tf.keras.layers.Conv2DTranspose(64, 3, (2, 2), activation=activation, padding='same',
+        conv6 = tf.keras.layers.Conv2DTranspose(filters, 3, (2, 2), activation=activation, padding='same',
                                                 kernel_initializer='he_normal')((conv6))
         conv6 = tf.keras.layers.BatchNormalization(trainable=True)(conv6)
         drop6 = tf.keras.layers.Dropout(0.1)(conv6, training=True)
 
-        #128
+        #filters
         merge7 = tf.keras.layers.concatenate([drop3, drop6], axis=3)
-        conv7 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge7)
+        conv7 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge7)
         conv7 = tf.keras.layers.BatchNormalization(trainable=True)(conv7)
-        conv7 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv7)
+        conv7 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv7)
         conv7 = tf.keras.layers.BatchNormalization(trainable=True)(conv7)
-        conv7 = tf.keras.layers.Conv2DTranspose(64, 3, (2, 2), activation=activation, padding='same',
+        conv7 = tf.keras.layers.Conv2DTranspose(filters, 3, (2, 2), activation=activation, padding='same',
                                                 kernel_initializer='he_normal')((conv7))
         conv7 = tf.keras.layers.BatchNormalization(trainable=True)(conv7)
         drop7 = tf.keras.layers.Dropout(0.1)(conv7, training=True)
 
         #256
         merge8 = tf.keras.layers.concatenate([drop2, drop7], axis=3)
-        conv8 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge8)
+        conv8 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge8)
         conv8 = tf.keras.layers.BatchNormalization(trainable=True)(conv8)
-        conv8 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv8)
+        conv8 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv8)
         conv8 = tf.keras.layers.BatchNormalization(trainable=True)(conv8)
-        conv8 = tf.keras.layers.Conv2DTranspose(64, 3, (2, 2), activation=activation, padding='same',
+        conv8 = tf.keras.layers.Conv2DTranspose(filters, 3, (2, 2), activation=activation, padding='same',
                                                 kernel_initializer='he_normal')((conv8))
         conv8 = tf.keras.layers.BatchNormalization(trainable=True)(conv8)
         drop8 = tf.keras.layers.Dropout(0.1)(conv8, training=True)
 
         #512
         merge9 = tf.keras.layers.concatenate([conv1, drop8], axis=3)
-        conv9 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge9)
-        conv9 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
-        conv9 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
+        conv9 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge9)
+        conv9 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
+        conv9 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
         conv9 = tf.keras.layers.Conv2D(1, 3, activation=None, padding='same', kernel_initializer='he_normal')(conv9)
         conv10 = tf.keras.layers.Conv2D(1, 1, activation=None)(conv9)
 

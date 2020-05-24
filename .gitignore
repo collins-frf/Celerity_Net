@@ -2,7 +2,6 @@ runs/
 results/
 papers/
 old/
-Celerity_Net/
 data/
 *.gif
 .idea/

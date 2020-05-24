@@ -23,25 +23,25 @@ def plot_for_gif(imgmean, labelmean, predmean, diffmean, i, pred_list):
     fig = plt.figure()
     fig.set_size_inches(16, 9)
 
-    ax0 = fig.add_subplot(2, 3, 1), \
-          plt.imshow(imgmean[:, downsample_zeroline:, i], cmap='Greys_r',
-                     extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters], vmax=1, vmin=0)
-    #ax0 = fig.add_subplot(2, 3, 1), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
-    cs = ax0[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)), vmin=-6, vmax=2, alpha=.5,
-                        colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
-                                'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
-                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
-                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
-                                    'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
-                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
-    print(cs.levels)
-    ax0[0].clabel(cs, fmt=fmt,
-                  inline_spacing=2, fontsize='x-small', )
-    cbar = plt.colorbar()
-    cbar.set_label('Pixel Intensity', fontsize=14)
-    plt.title('a) Timex', fontsize=16)
-    plt.ylabel('Alongshore (m)', fontsize=14)
-    plt.tick_params(labelsize=14)
+    if snap == True:
+        ax0 = fig.add_subplot(2, 3, 1), \
+              plt.imshow(imgmean[:, downsample_zeroline:, i], cmap='Greys_r',
+                         extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters], vmax=1, vmin=0)
+        #ax0 = fig.add_subplot(2, 3, 1), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
+        cs = ax0[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)), vmin=-6, vmax=2, alpha=.5,
+                            colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
+                                    'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
+                            levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
+                            linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
+                                        'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
+                            linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
+        ax0[0].clabel(cs, fmt=fmt,
+                      inline_spacing=2, fontsize='x-small', )
+        cbar = plt.colorbar()
+        cbar.set_label('Pixel Intensity', fontsize=14)
+        plt.title('a) Timex', fontsize=16)
+        plt.ylabel('Alongshore (m)', fontsize=14)
+        plt.tick_params(labelsize=14)
 
     ax1 = fig.add_subplot(2, 3, 2), \
           plt.imshow(labelmean[:, :, i], cmap='gist_earth', vmin=-6, vmax=1,
@@ -325,9 +325,13 @@ class Predictor(object):
         while i < len(preds):
             #grab first image, prediction image, and label
             img = imgs[i]
+            print(np.shape(img))
             img = img[:, :, :-1]
-            img = img[:, :img_cols,::-1]
+            print(np.shape(img))
+            img = img[:, :img_cols, :]
+            print(np.shape(img))
             img = np.mean(img, axis=2)
+            print(np.shape(img))
             img = cv2.resize(img, (bathy_cols, bathy_rows), interpolation=cv2.INTER_AREA)
             #img = np.expand_dims(img, axis=-1)
             pred = preds[i]
@@ -456,89 +460,40 @@ class Predictor(object):
             mae1d = mae2dmean.flatten()
             diff1d = diffmean.flatten()
 
+            bins = [.1, .2, .3, .4, .5, .6, .7, .8, .9, 10]
+            out = np.digitize(uc1d, bins, right=1)
+            print(np.shape(out))
+            print(out)
+
             i=0
-            uc1d_9 = []
-            mae1d_9 = []
-            uc1d_8 = []
-            mae1d_8 = []
-            uc1d_7 = []
-            mae1d_7 = []
-            uc1d_6 = []
-            mae1d_6 = []
-            uc1d_5 = []
-            mae1d_5 = []
-            uc1d_4 = []
-            mae1d_4 = []
-            uc1d_3 = []
-            mae1d_3 = []
-            uc1d_2 = []
-            mae1d_2 = []
-            uc1d_1 = []
-            mae1d_1 = []
-            uc1d_0 = []
-            mae1d_0 = []
-            diff1d_0 = []
-            diff1d_1 = []
-            diff1d_2 = []
-            diff1d_3 = []
-            diff1d_4 = []
-            diff1d_5 = []
-            diff1d_6 = []
-            diff1d_7 = []
-            diff1d_8 = []
-            diff1d_9 = []
-            while i < len(uc1d):
-                if (uc1d[i] > .0) & (uc1d[i] < .1):
-                    uc1d_0.append(uc1d[i])
-                    mae1d_0.append(mae1d[i])
-                    diff1d_0.append(diff1d[i])
-                elif (uc1d[i] > .1) & (uc1d[i] < .2):
-                    uc1d_1.append(uc1d[i])
-                    mae1d_1.append(mae1d[i])
-                    diff1d_1.append(diff1d[i])
-                elif (uc1d[i] > .2) & (uc1d[i] < .3):
-                    uc1d_2.append(uc1d[i])
-                    mae1d_2.append(mae1d[i])
-                    diff1d_2.append(diff1d[i])
-                elif (uc1d[i] > .3) & (uc1d[i] < .4):
-                    uc1d_3.append(uc1d[i])
-                    mae1d_3.append(mae1d[i])
-                    diff1d_3.append(diff1d[i])
-                elif (uc1d[i] > .4) & (uc1d[i] < .5):
-                    uc1d_4.append(uc1d[i])
-                    mae1d_4.append(mae1d[i])
-                    diff1d_4.append(diff1d[i])
-                elif (uc1d[i] > .5) & (uc1d[i] < .6):
-                    uc1d_5.append(uc1d[i])
-                    mae1d_5.append(mae1d[i])
-                    diff1d_5.append(diff1d[i])
-                elif (uc1d[i] > .6) & (uc1d[i] < .7):
-                    uc1d_6.append(uc1d[i])
-                    mae1d_6.append(mae1d[i])
-                    diff1d_6.append(diff1d[i])
-                elif (uc1d[i] > .7) & (uc1d[i] < .8):
-                    uc1d_7.append(uc1d[i])
-                    mae1d_7.append(mae1d[i])
-                    diff1d_7.append(diff1d[i])
-                elif (uc1d[i] > .8) & (uc1d[i] < .9):
-                    uc1d_8.append(uc1d[i])
-                    mae1d_8.append(mae1d[i])
-                    diff1d_8.append(diff1d[i])
-                elif uc1d[i] > .9:
-                    uc1d_9.append(uc1d[i])
-                    mae1d_9.append(mae1d[i])
-                    diff1d_9.append(diff1d[i])
-                else:
-                    continue
-                i+=1
+            temp = np.where(out==9)
+            mae1d_9 = mae1d[temp]
+            temp = np.where(out==8)
+            mae1d_8 = mae1d[temp]
+            temp = np.where(out==7)
+            mae1d_7 = mae1d[temp]
+            temp = np.where(out==6)
+            mae1d_6 = mae1d[temp]
+            temp = np.where(out==5)
+            mae1d_5 = mae1d[temp]
+            temp = np.where(out==4)
+            mae1d_4 = mae1d[temp]
+            temp = np.where(out==3)
+            mae1d_3 = mae1d[temp]
+            temp = np.where(out==2)
+            mae1d_2 = mae1d[temp]
+            temp = np.where(out==1)
+            mae1d_1 = mae1d[temp]
+            temp = np.where(out==0)
+            mae1d_0 = mae1d[temp]
 
             z = np.polyfit(pred1d, mae1d, 1)
             p = np.poly1d(z)
             fit = p(pred1d)
 
-            intense_z = np.polyfit(img1d, mae1d, 1)
-            intense_p = np.poly1d(z)
-            intense_fit = intense_p(img1d)
+            #intense_z = np.polyfit(img1d, mae1d, 1)
+            #intense_p = np.poly1d(z)
+            #intense_fit = intense_p(img1d)
 
             #figure 1
             fig = plt.figure()
