@@ -29,7 +29,7 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
               plt.imshow(img_mean[:, downsample_zeroline:, i], cmap='Greys_r',
                          extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters], vmax=1, vmin=0)
         #ax0 = fig.add_subplot(2, 3, 1), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
-        cs = ax0[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)), vmin=-6, vmax=2, alpha=.5,
+        cs = ax0[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)), vmin=-4, vmax=2, alpha=.5,
                             colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
                                     'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
                             levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
@@ -45,14 +45,14 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
         plt.tick_params(labelsize=14)
 
     ax1 = fig.add_subplot(2, 3, 2), \
-          plt.imshow(label_mean[:, :, i], cmap='gist_earth', vmin=-6, vmax=1,
+          plt.imshow(label_mean[:, :, i], cmap='gist_earth', vmin=-4, vmax=1,
                      extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters])
     #ax1 = fig.add_subplot(2, 3, 2), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
     cbar = plt.colorbar()
     cbar.set_label('Elevation (m)', fontsize=14)
     plt.tick_params(labelsize=14)
     cs = ax1[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)),
-                        vmin=-6, vmax=2, alpha=1,
+                        vmin=-4, vmax=2, alpha=1,
                         colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
                                 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
                         levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
@@ -63,8 +63,8 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
                   inline_spacing=2, fontsize='x-small', )
     plt.title('b) Truth', fontsize=16)
 
-    pred_transects = [[] for j in range(uncertainty_runs)]
-    for j in range(uncertainty_runs):
+    pred_transects = [[] for j in range(2*ensemble_runs)]
+    for j in range(2*ensemble_runs):
         pred_transects[j] = np.mean(pred_list[:, downsample_zeroline:, i, j],axis=0)
     x = np.linspace(zeroline, crosshore_distance_meters, num=len(label_transect))
     x_new = np.linspace(zeroline, crosshore_distance_meters)
@@ -95,7 +95,7 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
                                                extent=[zeroline, crosshore_distance_meters, 0,
                                                        alongshore_distance_meters])
     cs = ax3[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)),
-                        vmin=-6, vmax=2, alpha=.5,
+                        vmin=-4, vmax=2, alpha=.5,
                         colors='black',
                         levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
                         linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
@@ -111,7 +111,7 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
     cbar = plt.colorbar()
     cbar.set_label('(m)', fontsize=14)
 
-    ax4 = fig.add_subplot(2, 3, 5), plt.imshow(pred_mean[:, :, i], cmap='gist_earth', vmin=-6, vmax=1,
+    ax4 = fig.add_subplot(2, 3, 5), plt.imshow(pred_mean[:, :, i], cmap='gist_earth', vmin=-4, vmax=1,
                                                extent=[zeroline, crosshore_distance_meters, 0,
                                                        alongshore_distance_meters])
     #ax4 = fig.add_subplot(2, 3, 5), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
@@ -121,7 +121,7 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
     cbar = plt.colorbar()
     cbar.set_label('Elevation (m)', fontsize=14)
     cs = ax4[0].contour(X, Y, np.where(pred_up[:, :img_cols] > .1, 0, np.flip(pred_up[:, :img_cols], axis=0)),
-                        vmin=-6, vmax=2, alpha=1,
+                        vmin=-4, vmax=2, alpha=1,
                         colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
                                 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
                         levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
@@ -169,13 +169,12 @@ class Predictor(object):
         # create lists of 5m downsampled size bathy_rowsxbathy_cols of Test Set Size
         # and Number of Ensemble Runs to average over
         img_list, label_list, pred_list = \
-            (np.zeros((bathy_rows, bathy_cols, test_size, uncertainty_runs)) for i in range(3))
+            (np.zeros((bathy_rows, bathy_cols, test_size, ensemble_runs)) for i in range(3))
         diff_list, mae2d_list = \
-            (np.zeros((bathy_rows, bathy_cols-downsample_zeroline, test_size, uncertainty_runs)) for i in range(2))
-
-        for i in range(uncertainty_runs):
+            (np.zeros((bathy_rows, bathy_cols-downsample_zeroline, test_size, ensemble_runs)) for i in range(2))
+        img_batch, label_batch = test_unet.get_batch(test_dataset, train_flag='test')
+        for i in range(ensemble_runs):
             print("Ensemble Run #: ", i)
-            img_batch, label_batch = test_unet.get_batch(test_dataset, train_flag='test')
             """for j in range(len(img_batch)):
                 if j % 100 == 0:
                     image = img_batch[j]
@@ -250,6 +249,42 @@ class Predictor(object):
             label_list[:, :, :, i] = label_cube
             img_list[:, :, :, i] = timex_cube
 
+        #using infer-transformation use the flipped 2nd half prediction averaged with first half for more variation
+        first_half = img_list[:, :, :half_test_size, :]
+        second_half = img_list[:, :, half_test_size:, :]
+        img_list = np.concatenate((first_half, second_half), axis=-1)
+        first_half = label_list[:, :, :half_test_size, :]
+        second_half = label_list[:, :, half_test_size:, :]
+        label_list = np.concatenate((first_half, second_half), axis=-1)
+        first_half = pred_list[:, :, :half_test_size, :]
+        second_half = pred_list[:, :, half_test_size:, :]
+        pred_list = np.concatenate((first_half, second_half), axis=-1)
+        first_half = diff_list[:, :, :half_test_size, :]
+        second_half = diff_list[:, :, half_test_size:, :]
+        diff_list = np.concatenate((first_half, second_half), axis=-1)
+        first_half = mae2d_list[:, :, :half_test_size, :]
+        second_half = mae2d_list[:, :, half_test_size:, :]
+        mae2d_list = np.concatenate((first_half, second_half), axis=-1)
+        #img_list = (np.reshape(img_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #label_list = (np.reshape(label_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #pred_list = (np.reshape(pred_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #diff_list = (np.reshape(diff_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #mae2d_list = (np.reshape(mae2d_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #img_list = (np.reshape(img_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #label_list = (np.reshape(label_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #pred_list = (np.reshape(pred_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #diff_list = (np.reshape(diff_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        #mae2d_list = (np.reshape(mae2d_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
+        img_list[:, :, :, ensemble_runs:] = img_list[::-1, :, :, ensemble_runs:]
+        label_list[:, :, :, ensemble_runs:] = label_list[::-1, :, :, ensemble_runs:]
+        pred_list[:, :, :, ensemble_runs:] = pred_list[::-1, :, :, ensemble_runs:]
+        diff_list[:, :, :, ensemble_runs:] = diff_list[::-1, :, :, ensemble_runs:]
+        mae2d_list[:, :, :, ensemble_runs:] = mae2d_list[::-1, :, :, ensemble_runs:]
+        plt.subplot(2, 2, 1), plt.imshow(pred_list[:, :, 0, 0])
+        plt.subplot(2, 2, 2), plt.imshow(pred_list[:, :, 0, 1])
+        plt.subplot(2, 2, 3), plt.imshow(pred_list[:, :, 0, 2])
+        plt.subplot(2, 2, 4), plt.imshow(pred_list[:, :, 0, 3])
+        plt.show()
         # calculate stats over the set of ensemble runs
         model_mae = np.mean(mae_list)
         mae_err = 2*np.std(mae_list)
@@ -276,15 +311,18 @@ class Predictor(object):
         rms_histo = np.power(np.sum(np.sum(np.power(diff_mean, 2), axis=0), axis=0)/(bathy_rows*(bathy_cols-downsample_zeroline)), .5)
         max_pred = np.amax(pred_list[:, downsample_zeroline:, :, :], axis=-1)
         min_pred = np.amin(pred_list[:, downsample_zeroline:, :, :], axis=-1)
-
+        print(np.shape(label_mean))
+        print(np.shape(max_pred))
+        print(np.shape(min_pred))
         # calculate number of pixels whose prediction fall within ensemble range
         within_2d = np.where((max_pred > label_mean) & (label_mean > min_pred), 1, 0)
+        print(np.shape(within_2d))
 #        l = 0
 #        while l < test_size:
 #            plt.imshow(within_2d[:, :, l])
 #            plt.show()
 #            l+=10
-        print("within %: ", np.sum(within_2d)/(bathy_rows*bathy_cols*test_size))
+        print("within %: ", np.sum(within_2d)/(bathy_rows*bathy_cols*half_test_size))
 
         # plot full stats, individual uncertainty, or individual predictions based on args
         predict.plot(img_mean, label_mean, pred_mean, diff_mean, rms2d_mean, mae2d_mean,
@@ -292,7 +330,7 @@ class Predictor(object):
 
         # save plots of individual predictions for each image in test set in a gif
         imageio.mimsave('./' + name + '.gif', [plot_for_gif(img_mean, label_mean, pred_mean, diff_mean,
-                                                            i, pred_list) for i in range(test_size)], fps=1.5)
+                                                            i, pred_list) for i in range(half_test_size)], fps=1)
 
     @staticmethod
     def calc_stats(img_batch, label_batch):
@@ -394,21 +432,22 @@ class Predictor(object):
             label_cube[:, :, i] = label
             timex_cube[:, :, i] = img
 
+            offshore_cutoff = np.sum(np.any(label > -.01, axis=0))
             mae = np.power(np.power((pred[:, downsample_zeroline:]-label[:, downsample_zeroline:]), 2), .5)
-            rms = np.power(np.sum(np.power((pred[:, downsample_zeroline:]-label[:, downsample_zeroline:]), 2))*
-                           (1/(bathy_rows*(bathy_cols-downsample_zeroline))), .5)
+            rms = np.power(np.sum(np.power((pred[:, offshore_cutoff:]-label[:, offshore_cutoff:]), 2))*
+                           (1/(bathy_rows*(bathy_cols-offshore_cutoff))), .5)
             difference = pred[:, downsample_zeroline:] - label[:, downsample_zeroline:]
 
             diff_cube[:, :, i] = difference
             mae_cube[:, :, i] = mae
 
-            runmae = np.mean(mae)
-            greatest_error = np.amax(np.absolute(difference))
-            ten_percent = np.percentile(np.absolute(difference), 10)
-            twentyfive_percent = np.percentile(np.absolute(difference), 25)
-            fifty_percent = np.percentile(np.absolute(difference), 50)
-            eighty_percent = np.percentile(np.absolute(difference), 80)
-            ninety_percent = np.percentile(np.absolute(difference), 90)
+            runmae = np.mean(mae[:, offshore_cutoff:])
+            greatest_error = np.amax(np.absolute(difference[:, offshore_cutoff:]))
+            ten_percent = np.percentile(np.absolute(difference[:, offshore_cutoff:]), 10)
+            twentyfive_percent = np.percentile(np.absolute(difference[:, offshore_cutoff:]), 25)
+            fifty_percent = np.percentile(np.absolute(difference[:, offshore_cutoff:]), 50)
+            eighty_percent = np.percentile(np.absolute(difference[:, offshore_cutoff:]), 80)
+            ninety_percent = np.percentile(np.absolute(difference[:, offshore_cutoff:]), 90)
 
             runmae_list = np.append(runmae_list, runmae)
             runrms_list = np.append(runrms_list, rms)
@@ -474,9 +513,9 @@ class Predictor(object):
             temp = np.where(out==0)
             mae1d_0 = mae1d[temp]
 
-            z = np.polyfit(pred1d, mae1d, 1)
-            p = np.poly1d(z)
-            fit = p(pred1d)
+            #z = np.polyfit(pred1d, mae1d, 1)
+            #p = np.poly1d(z)
+            #fit = p(pred1d)
 
             #intense_z = np.polyfit(img1d, mae1d, 1)
             #intense_p = np.poly1d(z)

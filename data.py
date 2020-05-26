@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import mpl_scatter_density
 import numpy as np
+import pydot
 import pywick
 import scipy.interpolate as interp
 import tensorflow.keras as keras
@@ -292,18 +293,18 @@ def month_to_num(index, str_index):
 
 # load either train or test files based on index
 def train_or_test(self, idx):
-    # idx is >10000 if its test, derived from the flag given to unet.py/get_batch
+    # idx is >test_id_offset if its test, derived from the flag given to unet.py/get_batch
     img_path = ''
-    if idx < 10000:
+    if idx < test_id_offset:
         test = False
         if real_or_fake == 'fake':
             img_path = self.generated_training[idx]
         if real_or_fake == 'real':
             temp = len(self.argus_training) - idx -1
             img_path = self.argus_training[temp]
-    if idx >= 10000:
+    if idx >= test_id_offset:
         test = True
-        idx = idx - 10000
+        idx = idx - test_id_offset
         if real_or_fake == 'fake':
             img_path = self.test_generated[idx]
         if real_or_fake == 'real':
@@ -555,9 +556,9 @@ def add_channel(label, hs, d, f):
     #fill channel with shoreslope value
     labelslope = np.full(label.shape, shoreslope)
     #optionally add offshore wave conditions to each quadrant
-    #labelslope[:256, 256:] = d
-    #labelslope[256:, 256:] = hs
-    #labelslope[256:, :256] = f
+    labelslope[:256, 256:] = d
+    labelslope[256:, 256:] = hs
+    labelslope[256:, :256] = f
     labelslope = np.expand_dims(labelslope, axis=0)
     labelslope = np.expand_dims(labelslope, axis=-1)
     return labelslope

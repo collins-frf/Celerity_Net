@@ -207,32 +207,32 @@ class myUnet(object):
     def get_batch(self, timex_dataset, train_flag):
 
         if train_flag == 'train':
-            imgdatas = np.ndarray((batch_size, self.img_rows, self.img_cols, self.bands), dtype=np.float32)
-            imglabels = np.ndarray((batch_size, self.img_rows, self.img_cols, 1), dtype=np.float32)
+            img_batch = np.ndarray((batch_size, self.img_rows, self.img_cols, self.bands), dtype=np.float32)
+            label_batch = np.ndarray((batch_size, self.img_rows, self.img_cols, 1), dtype=np.float32)
             for j in range(batch_size):
                 random_index = np.random.uniform(0, len(timex_dataset)-(.1*len(timex_dataset)))
                 random_index = int(random_index)
                 sample = timex_dataset[random_index]
                 sample['label'] = np.expand_dims(sample['label'], axis=-1)
-                imgdatas[j] = sample['image']
-                imglabels[j] = sample['label']
+                img_batch[j] = sample['image']
+                label_batch[j] = sample['label']
         if train_flag == 'val':
-            imgdatas = np.ndarray((val_size, self.img_rows, self.img_cols, self.bands), dtype=np.float32)
-            imglabels = np.ndarray((val_size, self.img_rows, self.img_cols, 1), dtype=np.float32)
+            img_batch = np.ndarray((val_size, self.img_rows, self.img_cols, self.bands), dtype=np.float32)
+            label_batch = np.ndarray((val_size, self.img_rows, self.img_cols, 1), dtype=np.float32)
             for j in range(val_size):
                 random_index = np.random.uniform(len(timex_dataset)-val_size, len(timex_dataset))
                 random_index = int(random_index)
                 sample = timex_dataset[random_index]
                 sample['label'] = np.expand_dims(sample['label'], axis=-1)
-                imgdatas[j] = sample['image']
-                imglabels[j] = sample['label']
+                img_batch[j] = sample['image']
+                label_batch[j] = sample['label']
         if train_flag == 'test':
-            imgdatas = np.ndarray((test_size, self.img_rows, self.img_cols, self.bands), dtype=np.float32)
-            imglabels = np.ndarray((test_size, self.img_rows, self.img_cols, 1), dtype=np.float32)
-            l = 0
-            t = 0
+            img_batch = np.ndarray((test_size, self.img_rows, self.img_cols, self.bands), dtype=np.float32)
+            label_batch = np.ndarray((test_size, self.img_rows, self.img_cols, 1), dtype=np.float32)
+            l=0
+            t=0
             while l < cuts:
-                j = 0
+                j=0
                 while j < test_set_length:
                     random_index = j + test_id_offset
                     #random_index = np.random.uniform(0, test_size)
@@ -287,13 +287,15 @@ class myUnet(object):
                                       [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5,
                                        -.01], fmt=fmt, inline_spacing=2, fontsize='small', )
                         plt.show()"""
-                    imgdatas[t] = sample['image']
-                    imglabels[t] = sample['label']
+                    img_batch[t] = sample['image']
+                    label_batch[t] = sample['label']
                     j+=1
                     t+=1
-                l = l + 1
+                l+=1
+            img_batch[half_test_size:, :, :, :] = img_batch[:half_test_size, ::-1, :, :]
+            label_batch[half_test_size:, :, :, :] = label_batch[:half_test_size, ::-1, :, :]
 
-        return imgdatas, imglabels
+        return img_batch, label_batch
 
     def load_model(self):
         try:
@@ -340,20 +342,21 @@ class myUnet(object):
             model.save('./results/'+ name+ 'val_loss.h5', overwrite=True)
             self.fail_counter = 0
 
-        # else reduce learning rate by 1%
+        # else reduce learning rate by 2%
         else:
             self.fail_counter += 1
             print("val better fails in a row: " + str(self.fail_counter))
             if self.fail_counter % 1 == 0:
                 print("val loss failed to improve 1 epochs in a row")
-                print("Current LR: " + str(model.optimizer.lr) + "reducing learning rate by 1%")
-                tf.keras.backend.set_value(model.optimizer.lr, model.optimizer.lr * .99)
+                print("Current LR: " + str(model.optimizer.lr) + "reducing learning rate by 2%")
+                tf.keras.backend.set_value(model.optimizer.lr, model.optimizer.lr * .98)
                 print("New LR: " + str(tf.keras.backend.get_value(model.loss)))
 
     def train(self):
         timex_dataset = TimexDataset(Dataset)
         model = self.load_model()
-
+        #tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True, rankdir='TB', dpi=96)
+        tf.keras.backend.set_value(model.optimizer.lr, .0001)
         # validate before train
         self.validate(0, timex_dataset, model)
 
@@ -369,22 +372,22 @@ class myUnet(object):
             for i in range(int((len(timex_dataset)-val_size) / batch_size)):
 
                 # get training batch
-                imgdatas, imglabels = self.get_batch(timex_dataset, train_flag='train')
+                img_batch, label_batch = self.get_batch(timex_dataset, train_flag='train')
 
                 # train
-                train_history = model.train_on_batch(imgdatas, imglabels)
-                epoch_mean_loss = np.append(epoch_mean_loss, train_history[0])
-                with writer.as_default():
-                    tf.summary.scalar("Loss", train_history[0], step=i)
-                    tf.summary.scalar("Absolute Loss", train_history[1], step=i)
-                    tf.summary.scalar("LR", model.optimizer.lr, step=i)
+                train_history = model.train_on_batch(img_batch, label_batch)
+                #epoch_mean_loss = np.append(epoch_mean_loss, train_history[0])
+                #with writer.as_default():
+                #    tf.summary.scalar("Loss", train_history[0], step=i)
+                #    tf.summary.scalar("Absolute Loss", train_history[1], step=i)
+                #    tf.summary.scalar("LR", model.optimizer.lr, step=i)
 
-                print("Batch " + str(i) + "/" + str((len(timex_dataset)-val_size)/batch_size) +
+                """print("Batch " + str(i) + "/" + str((len(timex_dataset)-val_size)/batch_size) +
                     " Loss: " + str(train_history[0]) + 
                     " Absolute: " + str(train_history[1]) + 
                     " Max: " + str(train_history[2]) + 
                     " Min: " + str(train_history[3]))
-            print(" Epoch Loss: " + str(np.mean(epoch_mean_loss)))
+            print(" Epoch Loss: " + str(np.mean(epoch_mean_loss)))"""
             writer.flush()
             #save model at end of each epoch
             model.save('./results/'+ name+ 'iter.h5', overwrite=True)
