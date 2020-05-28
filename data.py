@@ -495,11 +495,16 @@ def load_image(img_path, real, UAS, duckgen, idx, issnap):
         if north < 0:
             north = 0
         south = north + img_rows
-        image = np.array(image, dtype='uint8')
-        image = cv2.resize(image, (gen_image_resize_width, gen_image_resize_height), interpolation=cv2.INTER_CUBIC)
-        image = image[north:south, synthetic_offset:(synthetic_offset+img_cols)]
-        new_image[:, :img_cols, :] = image
-        image = new_image
+        try:
+            image = np.array(image, dtype='uint8')
+            image = cv2.resize(image, (gen_image_resize_width, gen_image_resize_height), interpolation=cv2.INTER_CUBIC)
+            image = image[north:south, synthetic_offset:(synthetic_offset+img_cols)]
+            new_image[:, :img_cols, :] = image
+            image = new_image
+        except:
+            print(img_path)
+            plt.imshow(image)
+            plt.show()
         g_source = image
         seed = np.random.random()
         if seed >.0:
@@ -549,16 +554,16 @@ def add_channel(label, hs, d, f):
     shoreslope = (shoreline_elevation - offshore_elevation) / (img_cols)
     #apply a stretch of 10 to get values closer to median of .5 of other addtl inputs
     shoreslope = shoreslope*10
-
+    #shoreslope = 0
     # fill shoreline with 0s
     label[:, :zeroline] = 0
 
     #fill channel with shoreslope value
     labelslope = np.full(label.shape, shoreslope)
     #optionally add offshore wave conditions to each quadrant
-    labelslope[:256, 256:] = d
-    labelslope[256:, 256:] = hs
-    labelslope[256:, :256] = f
+    #labelslope[:256, 256:] = d
+    #labelslope[256:, 256:] = hs
+    #labelslope[256:, :256] = f
     labelslope = np.expand_dims(labelslope, axis=0)
     labelslope = np.expand_dims(labelslope, axis=-1)
     return labelslope
@@ -573,7 +578,7 @@ class TimexDataset(Dataset):
         self.duckgen_bathy = glob.glob('./data/labels/duckgen_bathy/*.mat')
         self.measured_bathy = glob.glob('./data/labels/measured_bathy/*.mat')
 
-        self.test_generated = sorted(glob.glob('./data/test/fakediff/duckgen+syn/timex/*.tiff'))
+        self.test_generated = sorted(glob.glob('./data/test/fakediff/timex/*.tiff'))
         self.test_observed = sorted(glob.glob('./data/test/300_real_test/timex/*.png'))
 
         self.transform = transform

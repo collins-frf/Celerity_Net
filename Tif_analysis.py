@@ -84,8 +84,6 @@ ax1 = fig.add_subplot(grid[0, 1])
 ax2 = fig.add_subplot(grid[0, 2])
 ax3 = fig.add_subplot(grid[0, 3])
 ax4 = fig.add_subplot(grid[1, :])
-norm = mpl.cm.colors.Normalize(vmax=label.max(), vmin=label.min())
-cmap = mpl.cm.gist_earth
 
 print(np.shape(label))
 

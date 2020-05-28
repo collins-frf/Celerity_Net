@@ -2,13 +2,13 @@
 from unet import *
 
 
-def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
+def plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean, i, pred_list):
 
     X = np.linspace(zeroline, crosshore_distance_meters, crosshore_distance_meters-zeroline)
     Y = np.linspace(0, alongshore_distance_meters, alongshore_distance_meters)
 
     label_transect = np.mean(label_mean[:, :, i], axis=0)
-    rms_transect = np.power(np.sum(np.power(diff_mean[:, :, i], 2), axis=0) / (bathy_cols-downsample_zeroline), .5)
+    rms_transect = np.power(np.sum(np.power(diff_mean[:, :, i]/(np.where((label_mean[:, :, i] > .1), label_mean[:, :, i], 1)), 2), axis=0) / (bathy_cols-downsample_zeroline), .5)
 
     label_up = cv2.resize(label_mean[:, :, i],
                           (crosshore_distance_meters-zeroline, alongshore_distance_meters), interpolation=cv2.INTER_CUBIC)
@@ -21,37 +21,46 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
     for l, s in zip([-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01], cs_labels):
         fmt[l] = s
 
-    fig = plt.figure()
-    fig.set_size_inches(16, 9)
+    fig = plt.figure(figsize=(16, 9))
+    grid = gridspec.GridSpec(2, 3, figure=fig)
+    ax0 = fig.add_subplot(grid[0, 0])
+    ax1 = fig.add_subplot(grid[0, 1])
+    ax4 = fig.add_subplot(grid[0, 2])
+    ax3 = fig.add_subplot(grid[1, 0])
+    ax2 = fig.add_subplot(grid[1, 1])
+    ax5 = fig.add_subplot(grid[1, 2])
 
-    if snap:
-        ax0 = fig.add_subplot(2, 3, 1), \
-              plt.imshow(img_mean[:, downsample_zeroline:, i], cmap='Greys_r',
-                         extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters], vmax=1, vmin=0)
-        #ax0 = fig.add_subplot(2, 3, 1), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
-        cs = ax0[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)), vmin=-4, vmax=2, alpha=.5,
-                            colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
-                                    'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
-                            levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
-                            linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
-                                        'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
-                            linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
-        ax0[0].clabel(cs, fmt=fmt,
-                      inline_spacing=2, fontsize='x-small', )
-        cbar = plt.colorbar()
-        cbar.set_label('Pixel Intensity', fontsize=14)
-        plt.title('a) Timex', fontsize=16)
-        plt.ylabel('Alongshore (m)', fontsize=14)
-        plt.tick_params(labelsize=14)
+    norm = mpl.cm.colors.Normalize(vmax=label_mean.max(), vmin=label_mean.min())
+    cmap = mpl.cm.gist_earth
 
-    ax1 = fig.add_subplot(2, 3, 2), \
-          plt.imshow(label_mean[:, :, i], cmap='gist_earth', vmin=-4, vmax=1,
+    img_norm = mpl.cm.colors.Normalize(vmax=.9, vmin=.1)
+    img_cmap = mpl.cm.Greys_r
+
+    ax0.imshow(img_mean[:, downsample_zeroline:, i], cmap='Greys_r',
+                     extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters], vmax=1, vmin=0)
+    #ax0 = fig.add_subplot(2, 3, 1), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
+    cs = ax0.contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)), vmin=-4, vmax=2, alpha=.5,
+                        colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
+                                'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
+                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
+                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
+                                    'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
+                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
+    ax0.clabel(cs, fmt=fmt,
+                  inline_spacing=2, fontsize='x-small', )
+    cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=img_norm, cmap=img_cmap), ax=ax0)
+    cbar.set_label('Pixel Intensity', fontsize=14)
+    ax0.set_title('a) Timex', fontsize=16)
+    ax0.set_ylabel('Alongshore (m)', fontsize=14)
+    plt.tick_params(labelsize=14)
+
+    ax1.imshow(label_mean[:, :, i], cmap='gist_earth', vmin=-4, vmax=1,
                      extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters])
     #ax1 = fig.add_subplot(2, 3, 2), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
-    cbar = plt.colorbar()
-    cbar.set_label('Elevation (m)', fontsize=14)
     plt.tick_params(labelsize=14)
-    cs = ax1[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)),
+    cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax1)
+    cbar.set_label('Elevation (m)', fontsize=14)
+    cs = ax1.contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)),
                         vmin=-4, vmax=2, alpha=1,
                         colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
                                 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
@@ -59,9 +68,67 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
                         linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
                                     'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
                         linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
-    ax1[0].clabel(cs, fmt=fmt,
+    ax1.clabel(cs, fmt=fmt,
                   inline_spacing=2, fontsize='x-small', )
-    plt.title('b) Truth', fontsize=16)
+    ax1.set_title('b) Truth', fontsize=16)
+
+
+    ax2.imshow(pred_mean[:, :, i], cmap='gist_earth', vmin=-4, vmax=1,
+                                               extent=[zeroline, crosshore_distance_meters, 0,
+                                                       alongshore_distance_meters])
+    #ax2 = fig.add_subplot(2, 3, 3), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
+    ax2.set_title('e) Predicted', fontsize=16)
+    plt.tick_params(labelsize=14)
+    cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax2)
+    cbar.set_label('Elevation (m)', fontsize=14)
+    cs = ax2.contour(X, Y, np.where(pred_up[:, :img_cols] > .1, 0, np.flip(pred_up[:, :img_cols], axis=0)),
+                        vmin=-4, vmax=2, alpha=1,
+                        colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
+                                'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
+                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
+                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
+                                    'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
+                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
+    ax2.clabel(cs, fmt=fmt,
+                  inline_spacing=2, fontsize='x-small', )
+
+    ax3.imshow(snap_mean[:, downsample_zeroline:, i], cmap='Greys_r',
+                     extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters], vmax=1, vmin=0)
+    #ax3 = fig.add_subplot(2, 3, 1), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
+    cs = ax3.contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)), vmin=-4, vmax=2, alpha=.5,
+                        colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
+                                'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
+                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
+                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
+                                    'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
+                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
+    ax3.clabel(cs, fmt=fmt,
+                  inline_spacing=2, fontsize='x-small', )
+    cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=img_norm, cmap=img_cmap), ax=ax3)
+    cbar.set_label('Pixel Intensity', fontsize=14)
+    ax3.set_title('d) Snap', fontsize=16)
+    ax3.set_ylabel('Alongshore (m)', fontsize=14)
+    ax3.set_xlabel('Cross-shore (m)', fontsize=14)
+    plt.tick_params(labelsize=14)
+
+    ax4.imshow(diff_mean[:, downsample_zeroline:, i], cmap='bwr', vmin=-2, vmax=2,
+                                               extent=[zeroline, crosshore_distance_meters, 0,
+                                                       alongshore_distance_meters])
+    cs = ax4.contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)),
+                        vmin=-4, vmax=2, alpha=.5,
+                        colors='black',
+                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
+                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
+                                    'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
+                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
+    ax4.clabel(cs, fmt=fmt,
+                  inline_spacing=2, fontsize='x-small', )
+    #ax4 = fig.add_subplot(2, 3, 2), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
+    ax4.set_xlabel('Cross-shore (m)', fontsize=14)
+    ax4.set_title('c) Difference', fontsize=16)
+    plt.tick_params(labelsize=14)
+    cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=mpl.cm.colors.Normalize(vmax=.5, vmin=-.5), cmap=mpl.cm.bwr), ax=ax4)
+    cbar.set_label('(m)', fontsize=14)
 
     pred_transects = [[] for j in range(2*ensemble_runs)]
     for j in range(2*ensemble_runs):
@@ -72,77 +139,31 @@ def plot_for_gif(img_mean, label_mean, pred_mean, diff_mean, i, pred_list):
 
     for j in range(len(pred_transects) - 1):
         pred_interpolate = interp.InterpolatedUnivariateSpline(x, pred_transects[j])
-        ax2 = fig.add_subplot(2, 3, 3), \
-              plt.plot(np.linspace(zeroline, crosshore_distance_meters), pred_interpolate(x_new), c='grey')
+        ax5.plot(np.linspace(zeroline, crosshore_distance_meters), pred_interpolate(x_new), c='grey')
 
     pred_interpolate = interp.InterpolatedUnivariateSpline(x, pred_transects[-1])
-    ax2 = fig.add_subplot(2, 3, 3), \
-          plt.plot(np.linspace(zeroline, crosshore_distance_meters), pred_interpolate(x_new), c='grey',
-                   label='Individual Predictions')
+    ax5.plot(np.linspace(zeroline, crosshore_distance_meters), pred_interpolate(x_new), c='grey',
+                   label='Indiv Preds')
     pred_interpolate = interp.InterpolatedUnivariateSpline(x, np.mean(pred_transects, axis=0))
-    ax2 = fig.add_subplot(2, 3, 3), \
-          plt.plot(x_new, pred_interpolate(x_new), c='red', label='Mean Prediction')
-    ax2 = fig.add_subplot(2, 3, 3), \
-          plt.plot(np.linspace(zeroline, crosshore_distance_meters), label_interpolate(x_new), c='cyan', label='Truth')
-    ax2[0].yaxis.tick_right()
-    ax2[0].yaxis.set_label_position("right")
+    ax5.plot(x_new, pred_interpolate(x_new), c='red', label='Mean Pred')
+    ax5.plot(np.linspace(zeroline, crosshore_distance_meters), label_interpolate(x_new), c='cyan', label='Truth')
+    ax5.set_ylabel('Elevation (m)', fontsize=14)
     plt.tick_params(labelsize=14)
-    plt.title('c) Alongshore Average Transects', fontsize=16)
-    plt.ylabel('Elevation (m)', fontsize=14)
-    plt.legend()
-
-    ax3 = fig.add_subplot(2, 3, 4), plt.imshow(diff_mean[:, downsample_zeroline:, i], cmap='bwr', vmin=-2, vmax=2,
-                                               extent=[zeroline, crosshore_distance_meters, 0,
-                                                       alongshore_distance_meters])
-    cs = ax3[0].contour(X, Y, np.where(label_up[:, :img_cols] > .1, 0, np.flip(label_up[:, :img_cols], axis=0)),
-                        vmin=-4, vmax=2, alpha=.5,
-                        colors='black',
-                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
-                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
-                                    'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
-                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
-    ax3[0].clabel(cs, fmt=fmt,
-                  inline_spacing=2, fontsize='x-small', )
-    #ax3 = fig.add_subplot(2, 3, 4), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
-    plt.ylabel('Alongshore (m)', fontsize=14)
-    plt.xlabel('Cross-shore (m)', fontsize=14)
-    plt.title('d) Difference', fontsize=16)
-    plt.tick_params(labelsize=14)
-    cbar = plt.colorbar()
-    cbar.set_label('(m)', fontsize=14)
-
-    ax4 = fig.add_subplot(2, 3, 5), plt.imshow(pred_mean[:, :, i], cmap='gist_earth', vmin=-4, vmax=1,
-                                               extent=[zeroline, crosshore_distance_meters, 0,
-                                                       alongshore_distance_meters])
-    #ax4 = fig.add_subplot(2, 3, 5), plt.plot([zeroline, crosshore_distance_meters], [258, 258], color='r')
-    plt.xlabel('Cross-shore (m)', fontsize=14)
-    plt.title('e) Predicted', fontsize=16)
-    plt.tick_params(labelsize=14)
-    cbar = plt.colorbar()
-    cbar.set_label('Elevation (m)', fontsize=14)
-    cs = ax4[0].contour(X, Y, np.where(pred_up[:, :img_cols] > .1, 0, np.flip(pred_up[:, :img_cols], axis=0)),
-                        vmin=-4, vmax=2, alpha=1,
-                        colors=['white', 'white', 'white', 'white', 'white', 'white', 'white', 'white', 'white',
-                                'white', 'white', 'white', 'white', 'white', 'white', 'white', 'black'],
-                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
-                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid',
-                                    'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
-                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
-    ax4[0].clabel(cs, fmt=fmt,
-                  inline_spacing=2, fontsize='x-small', )
+    ax5.set_xlabel('Cross-shore (m)', fontsize=14)
 
     x = np.linspace(zeroline, crosshore_distance_meters, num=len(rms_transect))
     x_new = np.linspace(zeroline, crosshore_distance_meters)
     interpolate = interp.InterpolatedUnivariateSpline(x, rms_transect)
-    ax5 = fig.add_subplot(2, 3, 6), plt.plot(np.linspace(zeroline, crosshore_distance_meters), interpolate(x_new),
-                                             c='r')
-    ax5[0].yaxis.tick_right()
-    ax5[0].yaxis.set_label_position("right")
-    plt.title('f) Alongshore Averaged RMSE', fontsize=16)
-    #plt.ylim((0, 1))
-    plt.xlabel('Cross-shore (m)', fontsize=14)
-    plt.ylabel('Error (m)', fontsize=14)
-    plt.tick_params(labelsize=14)
+    ax6 = ax5.twinx()
+    ax6.plot(np.linspace(zeroline, crosshore_distance_meters), interpolate(x_new),
+                                             c='b', label='RMSE')
+    plt.title('f) Alongshore Average Transects', fontsize=16)
+    ax6.legend(loc=1)
+    ax5.legend(loc=6)
+
+    ax6.set_ylabel('Error (m)', fontsize=14)
+    ax6.set_ylim(ymin=0, ymax=1)
+
     fig.tight_layout(pad=3)
     #plt.subplots_adjust(right=.6)
     # Used to return the plot as an image array
@@ -168,8 +189,8 @@ class Predictor(object):
 
         # create lists of 5m downsampled size bathy_rowsxbathy_cols of Test Set Size
         # and Number of Ensemble Runs to average over
-        img_list, label_list, pred_list = \
-            (np.zeros((bathy_rows, bathy_cols, test_size, ensemble_runs)) for i in range(3))
+        img_list, snap_list, label_list, pred_list = \
+            (np.zeros((bathy_rows, bathy_cols, test_size, ensemble_runs)) for i in range(4))
         diff_list, mae2d_list = \
             (np.zeros((bathy_rows, bathy_cols-downsample_zeroline, test_size, ensemble_runs)) for i in range(2))
         img_batch, label_batch = test_unet.get_batch(test_dataset, train_flag='test')
@@ -233,9 +254,9 @@ class Predictor(object):
 
             # calculate mean mae, mean bias, 10%tile error, 50%, 65%, 80%, 90%, greatest error,
             # also return the 2d means of pred, bias, and mae over the test set
-            runmae, meanrms, ten_percent, fifty_percent, \
-            sixtyfive_percent, eighty_percent, ninety_percent, greatest_error, pred_cube,\
-                diff_cube, mae_cube, label_cube, timex_cube = predict.calc_stats(img_batch, label_batch)
+            runmae, meanrms, ten_percent, fifty_percent, sixtyfive_percent, eighty_percent, ninety_percent, \
+            greatest_error, pred_cube, diff_cube, mae_cube, label_cube, timex_cube, snap_cube \
+                = predict.calc_stats(img_batch, label_batch)
 
             # add each value to a list to expand over each ensemble run
             mae_list = np.append(mae_list, runmae)
@@ -248,11 +269,15 @@ class Predictor(object):
             mae2d_list[:, :, :, i] = mae_cube
             label_list[:, :, :, i] = label_cube
             img_list[:, :, :, i] = timex_cube
+            snap_list[:, :, :, i] = snap_cube
 
         #using infer-transformation use the flipped 2nd half prediction averaged with first half for more variation
         first_half = img_list[:, :, :half_test_size, :]
         second_half = img_list[:, :, half_test_size:, :]
         img_list = np.concatenate((first_half, second_half), axis=-1)
+        first_half = snap_list[:, :, :half_test_size, :]
+        second_half = snap_list[:, :, half_test_size:, :]
+        snap_list = np.concatenate((first_half, second_half), axis=-1)
         first_half = label_list[:, :, :half_test_size, :]
         second_half = label_list[:, :, half_test_size:, :]
         label_list = np.concatenate((first_half, second_half), axis=-1)
@@ -276,15 +301,12 @@ class Predictor(object):
         #diff_list = (np.reshape(diff_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
         #mae2d_list = (np.reshape(mae2d_list, (bathy_rows, bathy_cols, half_test_size, ensemble_runs*2)))
         img_list[:, :, :, ensemble_runs:] = img_list[::-1, :, :, ensemble_runs:]
+        snap_list[:, :, :, ensemble_runs:] = snap_list[::-1, :, :, ensemble_runs:]
         label_list[:, :, :, ensemble_runs:] = label_list[::-1, :, :, ensemble_runs:]
         pred_list[:, :, :, ensemble_runs:] = pred_list[::-1, :, :, ensemble_runs:]
         diff_list[:, :, :, ensemble_runs:] = diff_list[::-1, :, :, ensemble_runs:]
         mae2d_list[:, :, :, ensemble_runs:] = mae2d_list[::-1, :, :, ensemble_runs:]
-        plt.subplot(2, 2, 1), plt.imshow(pred_list[:, :, 0, 0])
-        plt.subplot(2, 2, 2), plt.imshow(pred_list[:, :, 0, 1])
-        plt.subplot(2, 2, 3), plt.imshow(pred_list[:, :, 0, 2])
-        plt.subplot(2, 2, 4), plt.imshow(pred_list[:, :, 0, 3])
-        plt.show()
+
         # calculate stats over the set of ensemble runs
         model_mae = np.mean(mae_list)
         mae_err = 2*np.std(mae_list)
@@ -299,6 +321,7 @@ class Predictor(object):
 
         # average over each run to find ensemble means
         img_mean = np.mean(img_list, axis=3)
+        snap_mean = np.mean(snap_list, axis=3)
         label_mean = np.mean(label_list[:, downsample_zeroline:, :], axis=3)
         pred_mean = np.mean(pred_list[:, downsample_zeroline:, :], axis=3)
         diff_mean = np.mean(diff_list[:, :, :], axis=3)
@@ -307,16 +330,13 @@ class Predictor(object):
 
         # for display of rms, difference of each pixel(x,y) over entire test set
         rms2d_mean = np.power(np.sum(np.power(diff_mean, 2), axis=-1) / test_size, .5)
+        rms2d_mean = np.power(np.sum(np.power(diff_mean, 2)/(-pred_mean), axis=-1) / test_size, .5)
         diff_histo = np.mean(np.mean(diff_mean, axis=0), axis=0)
         rms_histo = np.power(np.sum(np.sum(np.power(diff_mean, 2), axis=0), axis=0)/(bathy_rows*(bathy_cols-downsample_zeroline)), .5)
         max_pred = np.amax(pred_list[:, downsample_zeroline:, :, :], axis=-1)
         min_pred = np.amin(pred_list[:, downsample_zeroline:, :, :], axis=-1)
-        print(np.shape(label_mean))
-        print(np.shape(max_pred))
-        print(np.shape(min_pred))
         # calculate number of pixels whose prediction fall within ensemble range
         within_2d = np.where((max_pred > label_mean) & (label_mean > min_pred), 1, 0)
-        print(np.shape(within_2d))
 #        l = 0
 #        while l < test_size:
 #            plt.imshow(within_2d[:, :, l])
@@ -329,7 +349,7 @@ class Predictor(object):
                      pred_err, diff_histo, rms_histo, pred_list)
 
         # save plots of individual predictions for each image in test set in a gif
-        imageio.mimsave('./' + name + '.gif', [plot_for_gif(img_mean, label_mean, pred_mean, diff_mean,
+        imageio.mimsave('./' + name + '.gif', [plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean,
                                                             i, pred_list) for i in range(half_test_size)], fps=1)
 
     @staticmethod
@@ -343,7 +363,7 @@ class Predictor(object):
             fifty_percent_list, eighty_percent_list, ninety_percent_list = ([] for i in range(8))
 
         # create cube for each object (timex, label, pred) and spatial derivatives for plotting
-        timex_cube, label_cube, pred_cube = (np.zeros((bathy_rows, bathy_cols, np.size(preds,0))) for i in range(3))
+        timex_cube, snap_cube, label_cube, pred_cube = (np.zeros((bathy_rows, bathy_cols, np.size(preds,0))) for i in range(4))
         diff_cube, mae_cube = (np.zeros((bathy_rows, bathy_cols-downsample_zeroline, np.size(preds, 0))) for i in range(2))
 
         i=0
@@ -352,10 +372,18 @@ class Predictor(object):
             # grab first image, prediction image, and label
             img = img_batch[i]
             img = img[:, :, :-1]
-            img = img[:, :img_cols, :]
-            img = np.mean(img, axis=2)
+            if snap:
+                snap_img = img[:, :img_cols, 1]
+                snap_img = cv2.resize(snap_img, (bathy_cols, bathy_rows), interpolation=cv2.INTER_AREA)
+                snap_cube[:, :, i] = snap_img
+            else:
+                snap_img = np.zeros((bathy_rows, bathy_cols))
+                snap_cube[:, :, i] = snap_img
+            img = img[:, :img_cols, 0]
+            #img = np.mean(img[:, :, 1], axis=2)
 
             # downsample to 5m grid resolution (resolution of measured bathys and comparable methods)
+
             img = cv2.resize(img, (bathy_cols, bathy_rows), interpolation=cv2.INTER_AREA)
 
             #img = np.expand_dims(img, axis=-1)
@@ -434,7 +462,7 @@ class Predictor(object):
 
             offshore_cutoff = np.sum(np.any(label > -.01, axis=0))
             mae = np.power(np.power((pred[:, downsample_zeroline:]-label[:, downsample_zeroline:]), 2), .5)
-            rms = np.power(np.sum(np.power((pred[:, offshore_cutoff:]-label[:, offshore_cutoff:]), 2))*
+            rms = np.power(np.sum(np.power(((pred[:, offshore_cutoff:]-label[:, offshore_cutoff:])/(-label[:, offshore_cutoff:])), 2))*
                            (1/(bathy_rows*(bathy_cols-offshore_cutoff))), .5)
             difference = pred[:, downsample_zeroline:] - label[:, downsample_zeroline:]
 
@@ -471,7 +499,7 @@ class Predictor(object):
 
         return model_mae, model_rms, model_tenerror, model_fiftyerror, \
                model_sixtyerror, model_eightyerror, model_ninetyerror, model_greatesterror, \
-               pred_cube, diff_cube, mae_cube, label_cube, timex_cube
+               pred_cube, diff_cube, mae_cube, label_cube, timex_cube, snap_cube
 
     @staticmethod
     def plot(img_mean, label_mean, pred_mean, diff_mean, rms2d_mean, mae2d_mean, pred_err, diff_histo, rms_histo, pred_list):
@@ -541,8 +569,8 @@ class Predictor(object):
             ax0.set_xlabel('Prediction Depth (m)', fontsize=16)
             ax0.set_ylabel('Truth Depth (m)', fontsize=16)
 
-            norm = mpl.cm.colors.Normalize(vmax=rms2d_mean.max(), vmin=0)
-            ax1.imshow(rms2d_mean, cmap='jet', vmax=rms2d_mean.max(), vmin=0, extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters])
+            norm = mpl.cm.colors.Normalize(vmax=.2, vmin=0)
+            ax1.imshow(rms2d_mean, cmap='jet', vmax=.2, vmin=0, extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters])
             ax1.set_title('b) Spatial RMSE', fontsize=20)
             ax1.set_anchor('W')
             cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax1)

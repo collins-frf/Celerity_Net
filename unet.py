@@ -95,7 +95,6 @@ class myUnet(object):
         model = keras.models.Model(inputs=inputs, outputs=conv10)
         model.compile(optimizer=optimizer, loss=loss, metrics=[absolute_error, pred_max, pred_min])
 
-        model.summary()
         return model
 
     def get_newnet(self):
@@ -210,7 +209,7 @@ class myUnet(object):
             img_batch = np.ndarray((batch_size, self.img_rows, self.img_cols, self.bands), dtype=np.float32)
             label_batch = np.ndarray((batch_size, self.img_rows, self.img_cols, 1), dtype=np.float32)
             for j in range(batch_size):
-                random_index = np.random.uniform(0, len(timex_dataset)-(.1*len(timex_dataset)))
+                random_index = np.random.uniform(0, len(timex_dataset)-val_size)
                 random_index = int(random_index)
                 sample = timex_dataset[random_index]
                 sample['label'] = np.expand_dims(sample['label'], axis=-1)
@@ -298,12 +297,14 @@ class myUnet(object):
         return img_batch, label_batch
 
     def load_model(self):
+
         try:
             my_model = keras.models.load_model('./results/'+ name+ 'iter.h5', custom_objects={
-                'absolute_error': absolute_error,
-                'pred_max': pred_max,
-                'pred_min': pred_min,})
+            'absolute_error': absolute_error,
+            'pred_max': pred_max,
+            'pred_min': pred_min,})
             print("loaded chk")
+
         except:
             my_model = self.get_newnet()
             print("couldnt load chk")
@@ -331,7 +332,7 @@ class myUnet(object):
         self.val_loss = float(val_history[0])
         writer = tf.summary.create_file_writer(logs_path)
         with writer.as_default():
-            tf.summary.scalar("Val_Loss", val_history[0], step=1)
+            tf.summary.scalar("Val_Loss", val_history[0], step=epoch)
         writer.flush()
 
         # if val loss is better than record, save val_loss model
@@ -356,14 +357,14 @@ class myUnet(object):
         timex_dataset = TimexDataset(Dataset)
         model = self.load_model()
         #tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True, rankdir='TB', dpi=96)
-        tf.keras.backend.set_value(model.optimizer.lr, .0001)
+        #tf.keras.backend.set_value(model.optimizer.lr, .0001)
         # validate before train
         self.validate(0, timex_dataset, model)
 
         # train for epoch_no epochs
-        for epoch in range(epoch_no):
+        epoch=0
+        while epoch < range(epoch_no):
             print(epoch)
-            epoch_mean_loss = []
 
             #create summary writer for tensorboard
             writer = tf.summary.create_file_writer(logs_path)
@@ -376,22 +377,20 @@ class myUnet(object):
 
                 # train
                 train_history = model.train_on_batch(img_batch, label_batch)
-                #epoch_mean_loss = np.append(epoch_mean_loss, train_history[0])
-                #with writer.as_default():
-                #    tf.summary.scalar("Loss", train_history[0], step=i)
-                #    tf.summary.scalar("Absolute Loss", train_history[1], step=i)
-                #    tf.summary.scalar("LR", model.optimizer.lr, step=i)
-
-                """print("Batch " + str(i) + "/" + str((len(timex_dataset)-val_size)/batch_size) +
+                print("Batch " + str(i) + "/" + str((len(timex_dataset)-val_size)/batch_size) +
                     " Loss: " + str(train_history[0]) + 
                     " Absolute: " + str(train_history[1]) + 
                     " Max: " + str(train_history[2]) + 
                     " Min: " + str(train_history[3]))
-            print(" Epoch Loss: " + str(np.mean(epoch_mean_loss)))"""
+            with writer.as_default():
+                tf.summary.scalar("Loss", train_history[0], step=epoch)
+                tf.summary.scalar("Absolute Loss", train_history[1], step=epoch)
+                tf.summary.scalar("LR", model.optimizer.lr, step=epoch)
             writer.flush()
             #save model at end of each epoch
             model.save('./results/'+ name+ 'iter.h5', overwrite=True)
             self.validate(epoch, timex_dataset, model)
+            epoch+=1
 
 
 if __name__ == '__main__':
