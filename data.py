@@ -1,7 +1,6 @@
 #all the imports for every file
 from astropy.visualization.mpl_normalize import ImageNormalize
 from astropy.visualization import LogStretch
-from kerasgradcam.pyimagesearch.gradcam import *
 from losses import *
 from PIL import Image
 from random import *
@@ -49,6 +48,47 @@ def uas_handle():
     new_label[:, :img_cols] = label
     label = new_label
     return real, duckgen, UAS, label
+
+
+# if using histogram matching with input data
+def histogram_match(g_source, seed):
+    if seed > .0:
+        g_reference = np.asarray(
+            Image.open('./data/test/real2016/1452274201.Fri.Jan.08_17_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
+        if seed > .3:
+            g_reference = np.asarray(
+                Image.open('./data/test/real2016/1453491001.Fri.Jan.22_19_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
+            if seed > .5:
+                g_reference = np.asarray(Image.open(
+                    './data/test/real2016/1452709801.Wed.Jan.13_18_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
+                if seed > .7:
+                    g_reference = np.asarray(Image.open(
+                        './data/test/real2016/1477328401.Mon.Oct.24_17_00_01.GMT.2016.argus02b.cx.timex.merge.png'))
+                    if seed > .9:
+                        g_reference = np.asarray(Image.open(
+                            './data/test/real2016/1483196401.Sat.Dec.31_15_00_01.GMT.2016.argus02b.cx.timex.merge.png'))
+    g_matched = match_histograms(g_source, g_reference)
+    image = g_matched.astype('int16')
+    return image
+
+
+# iadd gaussian noise to RGB input data before convert to grayscale
+def gaussian_noise(g_source):
+    noise = np.random.normal(0, noise_std, size=(512, 512, 3))
+    image = g_source + noise
+    return image
+
+
+# add uniform noise across entire image to RGB input data
+# before convert to grayscale
+def uniform_noise(g_source):
+    g_source[:, :, :, :-1] = g_source[:, :, :, :-1] / 255
+    noise = np.random.normal(0, noise_std)
+    image = g_source
+    image[:, :, :, :-1] = g_source[:, :, :, :-1] + noise
+    image = np.where(image < 0, 0, image)
+
+    return image
 
 
 # set hs, d, f according to WC lookup table
@@ -427,7 +467,7 @@ def cycle_bathyno(self, year, index):
 
 
 # load tif image, histogram equalize to real if fake, and crop/resize to input into network
-def load_image(img_path, real, UAS, duckgen, idx, issnap):
+def load_image(img_path, real, UAS, duckgen, idx, test, issnap):
 
     # load tiff, else load png
     try:
@@ -470,22 +510,6 @@ def load_image(img_path, real, UAS, duckgen, idx, issnap):
         image = image[north:south, duckgen_offset:(duckgen_offset+img_cols)]
         new_image[:, :img_cols, :] = image
         image = new_image
-        g_source = image
-        seed = np.random.random()
-        if seed >.0:
-            g_reference = np.asarray(Image.open('./data/test/real2016/1452274201.Fri.Jan.08_17_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
-            if seed > .3:
-                g_reference = np.asarray(Image.open('./data/test/real2016/1453491001.Fri.Jan.22_19_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
-                if seed > .5:
-                    g_reference = np.asarray(Image.open('./data/test/real2016/1452709801.Wed.Jan.13_18_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
-                    if seed > .7:
-                        g_reference = np.asarray(Image.open(
-                            './data/test/real2016/1477328401.Mon.Oct.24_17_00_01.GMT.2016.argus02b.cx.timex.merge.png'))
-                        if seed > .9:
-                            g_reference = np.asarray(Image.open('./data/test/real2016/1483196401.Sat.Dec.31_15_00_01.GMT.2016.argus02b.cx.timex.merge.png'))
-
-        g_matched = match_histograms(g_source, g_reference)
-        image = g_matched.astype('int16')
 
     # crop & interpolation settings for completely synthetic imagery to randomly select a section and
     # get to 1 cell -> 1m resolution, also histogram matching with a random argus image
@@ -505,21 +529,6 @@ def load_image(img_path, real, UAS, duckgen, idx, issnap):
             print(img_path)
             plt.imshow(image)
             plt.show()
-        g_source = image
-        seed = np.random.random()
-        if seed >.0:
-            g_reference = np.asarray(Image.open('./data/test/real2016/1452274201.Fri.Jan.08_17_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
-            if seed > .3:
-                g_reference = np.asarray(Image.open('./data/test/real2016/1453491001.Fri.Jan.22_19_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
-                if seed > .5:
-                    g_reference = np.asarray(Image.open('./data/test/real2016/1452709801.Wed.Jan.13_18_30_01.GMT.2016.argus02b.cx.timex.merge.png'))
-                    if seed > .7:
-                        g_reference = np.asarray(Image.open(
-                            './data/test/real2016/1477328401.Mon.Oct.24_17_00_01.GMT.2016.argus02b.cx.timex.merge.png'))
-                        if seed > .9:
-                            g_reference = np.asarray(Image.open('./data/test/real2016/1483196401.Sat.Dec.31_15_00_01.GMT.2016.argus02b.cx.timex.merge.png'))
-        g_matched = match_histograms(g_source, g_reference)
-        image = g_matched.astype('int16')
 
     image = np.mean(image, axis=2)
     image = np.expand_dims(image, axis=-1)
@@ -529,7 +538,7 @@ def load_image(img_path, real, UAS, duckgen, idx, issnap):
 
 
 # load tif snap in same method as load_image
-def load_snap(img_path, real, UAS, duckgen, idx):
+def load_snap(img_path, real, UAS, duckgen, idx, test):
 
     #change timex in folder to snap
     timex_index = img_path.find("timex")
@@ -540,7 +549,7 @@ def load_snap(img_path, real, UAS, duckgen, idx):
     img_path = "".join(img_path)
     issnap=True
     #load snap w/ same method used to load timex image
-    snap = load_image(img_path, real, UAS, duckgen, idx, issnap)
+    snap = load_image(img_path, real, UAS, duckgen, idx, test, issnap)
     return snap
 
 
@@ -611,11 +620,11 @@ class TimexDataset(Dataset):
         hs, d, f = set_cond(img_path)
 
         #load timex image
-        image = load_image(img_path, real, UAS, duckgen, idx, issnap=False)
+        image = load_image(img_path, real, UAS, duckgen, idx, test, issnap=False)
 
         #load snapshot image if desired
         if snap:
-            snap_image = load_snap(img_path, real, UAS, duckgen, idx)
+            snap_image = load_snap(img_path, real, UAS, duckgen, idx, test)
 
         #create an additional channel with slope, wave height direction and period information in each quadrant
         info_channel = add_channel(label, hs, d, f)
@@ -631,7 +640,15 @@ class TimexDataset(Dataset):
         image = np.full(image.shape, image, dtype='float32')
 
         #normalize the grayscale channels
-        image[:, :, :, :2] = image[:, :, :, :2] / 255
+        g_source = image
+        seed = np.random.random()
+        if test:
+            # image[:, :, :, :-1] = image[:, :, :, :-1] / 255
+            image = uniform_noise(g_source)
+            # image = gaussian_noise(g_source)
+            # image = histogram_match(g_source, seed)
+        else:
+            image[:, :, :, :-1] = image[:, :, :, :-1] / 255
 
         #add zeros in image/label from the shoreline according to zeroline setting
         image[:, :, :zeroline, :] = 0
@@ -675,5 +692,5 @@ class TimexDataset(Dataset):
                 linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid'],
                 linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
         ax2[0].clabel(cs, [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01], fmt=fmt, inline_spacing = 2, fontsize='small',)
-        plt.show()"""
+        plt.show()"""""
         return sample

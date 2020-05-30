@@ -2,23 +2,24 @@ from data import *
 import glob
 
 # change often - global variables
-epoch_no = 1000
+epoch_no = 250
 cuts = 1
-test_set_length = len(glob.glob('./data/test/fakediff/timex/*.tiff'))
+test_set_length = 50#len(glob.glob('./data/test/fakediff/timex/*.tiff'))
 test_size = int(cuts * 2 * test_set_length)
 half_test_size = int(.5*test_size)
-ensemble_runs = 5
+ensemble_runs = 25
 val_size = 300
 batch_size = 10
 filters = 64
+noise_std = .05
 real_or_fake = 'fake'
-snap = True
+snap = False
 activation = 'sigmoid'
 loss = "mean_absolute_error"
-lr=.0001
+lr=.001
 optimizer = tf.keras.optimizers.Nadam(lr=lr, beta_1=.9, beta_2=.999, epsilon=1e-7, schedule_decay=.004)
-#name = loss + str(lr) +"_"+ activation +"_snap=" +str(snap) + "_" + str(filters)
-name = "mean_absolute_error0.0001_sigmoid_snap_64"
+name = loss + str(lr) +"_"+ activation +"_snap=" +str(snap) + "_" + str(filters) +"_nohe_"
+#name = "mean_absolute_error0.0001_sigmoid_snap_64"
 logs_path = "./runs/" + name
 
 ### interpolation settings

@@ -198,8 +198,6 @@ class myUnet(object):
         #model = keras.models.Model(inputs=inputs, outputs=outputs)
         #model.compile(optimizer=optimizer, loss=loss, metrics=[absolute_error, pred_max, pred_min])
 
-        model.summary()
-
         tf.summary
         return model
 
@@ -357,14 +355,16 @@ class myUnet(object):
         timex_dataset = TimexDataset(Dataset)
         model = self.load_model()
         #tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True, rankdir='TB', dpi=96)
-        #tf.keras.backend.set_value(model.optimizer.lr, .0001)
-        # validate before train
-        self.validate(0, timex_dataset, model)
 
         # train for epoch_no epochs
         epoch=0
-        while epoch < range(epoch_no):
+        # validate before train
+        self.validate(epoch, timex_dataset, model)
+
+        while epoch < epoch_no:
             print(epoch)
+            if epoch == 75:
+                tf.keras.backend.set_value(model.optimizer.lr, .0001)
 
             #create summary writer for tensorboard
             writer = tf.summary.create_file_writer(logs_path)
@@ -382,10 +382,10 @@ class myUnet(object):
                     " Absolute: " + str(train_history[1]) + 
                     " Max: " + str(train_history[2]) + 
                     " Min: " + str(train_history[3]))
-            with writer.as_default():
-                tf.summary.scalar("Loss", train_history[0], step=epoch)
-                tf.summary.scalar("Absolute Loss", train_history[1], step=epoch)
-                tf.summary.scalar("LR", model.optimizer.lr, step=epoch)
+                with writer.as_default():
+                    tf.summary.scalar("Loss", train_history[0], step=int((((len(timex_dataset)-val_size)*epoch)/batch_size)+i))
+                    tf.summary.scalar("Absolute Loss", train_history[1], step=int((((len(timex_dataset)-val_size)*epoch)/batch_size)+i))
+                    tf.summary.scalar("LR", model.optimizer.lr, step=int((((len(timex_dataset)-val_size)*epoch)/batch_size)+i))
             writer.flush()
             #save model at end of each epoch
             model.save('./results/'+ name+ 'iter.h5', overwrite=True)

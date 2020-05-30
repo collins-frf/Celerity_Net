@@ -8,7 +8,8 @@ def plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean, i, pred_
     Y = np.linspace(0, alongshore_distance_meters, alongshore_distance_meters)
 
     label_transect = np.mean(label_mean[:, :, i], axis=0)
-    rms_transect = np.power(np.sum(np.power(diff_mean[:, :, i]/(np.where((label_mean[:, :, i] > .1), label_mean[:, :, i], 1)), 2), axis=0) / (bathy_cols-downsample_zeroline), .5)
+    nrms_transect = np.power(np.sum(np.power(diff_mean[:, :, i]/(np.where((-label_mean[:, :, i] > .3), label_mean[:, :, i], 1)), 2), axis=0) / (bathy_cols-downsample_zeroline), .5)
+    rms_transect = np.power(np.sum(np.power(diff_mean[:, :, i], 2), axis=0) / (bathy_cols - downsample_zeroline), .5)
 
     label_up = cv2.resize(label_mean[:, :, i],
                           (crosshore_distance_meters-zeroline, alongshore_distance_meters), interpolation=cv2.INTER_CUBIC)
@@ -91,6 +92,9 @@ def plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean, i, pred_
                         linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 2])
     ax2.clabel(cs, fmt=fmt,
                   inline_spacing=2, fontsize='x-small', )
+    ax2.set_xlabel('Cross-shore (m)', fontsize=14)
+
+
 
     ax3.imshow(snap_mean[:, downsample_zeroline:, i], cmap='Greys_r',
                      extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters], vmax=1, vmin=0)
@@ -150,18 +154,20 @@ def plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean, i, pred_
     ax5.set_ylabel('Elevation (m)', fontsize=14)
     plt.tick_params(labelsize=14)
     ax5.set_xlabel('Cross-shore (m)', fontsize=14)
+    ax5.set_ylim(ymax=1, ymin=-8)
 
     x = np.linspace(zeroline, crosshore_distance_meters, num=len(rms_transect))
     x_new = np.linspace(zeroline, crosshore_distance_meters)
     interpolate = interp.InterpolatedUnivariateSpline(x, rms_transect)
     ax6 = ax5.twinx()
-    ax6.plot(np.linspace(zeroline, crosshore_distance_meters), interpolate(x_new),
-                                             c='b', label='RMSE')
+    ax6.plot(np.linspace(zeroline, crosshore_distance_meters), interpolate(x_new), c='b', label='RMSE')
+    interpolate = interp.InterpolatedUnivariateSpline(x, nrms_transect)
+    ax6.plot(np.linspace(zeroline, crosshore_distance_meters), interpolate(x_new), c='black', label='Depth Norm RMSE')
     plt.title('f) Alongshore Average Transects', fontsize=16)
     ax6.legend(loc=1)
     ax5.legend(loc=6)
 
-    ax6.set_ylabel('Error (m)', fontsize=14)
+    ax6.set_ylabel('', fontsize=14)
     ax6.set_ylim(ymin=0, ymax=1)
 
     fig.tight_layout(pad=3)
@@ -193,8 +199,8 @@ class Predictor(object):
             (np.zeros((bathy_rows, bathy_cols, test_size, ensemble_runs)) for i in range(4))
         diff_list, mae2d_list = \
             (np.zeros((bathy_rows, bathy_cols-downsample_zeroline, test_size, ensemble_runs)) for i in range(2))
-        img_batch, label_batch = test_unet.get_batch(test_dataset, train_flag='test')
         for i in range(ensemble_runs):
+            img_batch, label_batch = test_unet.get_batch(test_dataset, train_flag='test')
             print("Ensemble Run #: ", i)
             """for j in range(len(img_batch)):
                 if j % 100 == 0:
@@ -350,7 +356,7 @@ class Predictor(object):
 
         # save plots of individual predictions for each image in test set in a gif
         imageio.mimsave('./' + name + '.gif', [plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean,
-                                                            i, pred_list) for i in range(half_test_size)], fps=1)
+                                                            i, pred_list) for i in range(half_test_size)], fps=.5)
 
     @staticmethod
     def calc_stats(img_batch, label_batch):
@@ -570,8 +576,8 @@ class Predictor(object):
             ax0.set_ylabel('Truth Depth (m)', fontsize=16)
 
             norm = mpl.cm.colors.Normalize(vmax=.2, vmin=0)
-            ax1.imshow(rms2d_mean, cmap='jet', vmax=.2, vmin=0, extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters])
-            ax1.set_title('b) Spatial RMSE', fontsize=20)
+            ax1.imshow(rms2d_mean, cmap='jet', vmax=.3, vmin=0, extent=[zeroline, crosshore_distance_meters, 0, alongshore_distance_meters])
+            ax1.set_title('b) Depth Norm RMSE', fontsize=20)
             ax1.set_anchor('W')
             cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax1)
             cbar.set_label('(m)', fontsize=14)
