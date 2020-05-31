@@ -357,7 +357,7 @@ class myUnet(object):
         #tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True, rankdir='TB', dpi=96)
 
         # train for epoch_no epochs
-        epoch=0
+        epoch=1
         # validate before train
         self.validate(epoch, timex_dataset, model)
 

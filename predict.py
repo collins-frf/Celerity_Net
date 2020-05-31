@@ -31,7 +31,7 @@ def plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean, i, pred_
     ax2 = fig.add_subplot(grid[1, 1])
     ax5 = fig.add_subplot(grid[1, 2])
 
-    norm = mpl.cm.colors.Normalize(vmax=label_mean.max(), vmin=label_mean.min())
+    norm = mpl.cm.colors.Normalize(vmax=1, vmin=-6)
     cmap = mpl.cm.gist_earth
 
     img_norm = mpl.cm.colors.Normalize(vmax=.9, vmin=.1)
@@ -256,7 +256,7 @@ class Predictor(object):
 
             # make a prediction on the entire test set
             predictions = model.predict(img_batch, batch_size=1, verbose=1)
-            np.save('./results/mask_test.npy', predictions)
+            np.save('./results/' + name + '.npy', predictions)
 
             # calculate mean mae, mean bias, 10%tile error, 50%, 65%, 80%, 90%, greatest error,
             # also return the 2d means of pred, bias, and mae over the test set
@@ -336,7 +336,7 @@ class Predictor(object):
 
         # for display of rms, difference of each pixel(x,y) over entire test set
         rms2d_mean = np.power(np.sum(np.power(diff_mean, 2), axis=-1) / test_size, .5)
-        rms2d_mean = np.power(np.sum(np.power(diff_mean, 2)/(-pred_mean), axis=-1) / test_size, .5)
+        rms2d_mean = np.power(np.sum(np.power(diff_mean, 2)/(-label_mean), axis=-1) / test_size, .5)
         diff_histo = np.mean(np.mean(diff_mean, axis=0), axis=0)
         rms_histo = np.power(np.sum(np.sum(np.power(diff_mean, 2), axis=0), axis=0)/(bathy_rows*(bathy_cols-downsample_zeroline)), .5)
         max_pred = np.amax(pred_list[:, downsample_zeroline:, :, :], axis=-1)
@@ -362,7 +362,7 @@ class Predictor(object):
     def calc_stats(img_batch, label_batch):
 
         # load data to write
-        preds = np.load('./results/mask_test.npy')
+        preds = np.load('./results/' + name + '.npy')
 
         # create lists for each statistic across the test set for this ensemble run
         runmae_list, runrms_list, greatest_error_list, ten_percent_list, twentyfive_percent_list, \
@@ -509,6 +509,16 @@ class Predictor(object):
 
     @staticmethod
     def plot(img_mean, label_mean, pred_mean, diff_mean, rms2d_mean, mae2d_mean, pred_err, diff_histo, rms_histo, pred_list):
+        np.save('./results/plot/' + name + "img_mean.npy", img_mean)
+        np.save('./results/plot/' + name + "label_mean.npy", label_mean)
+        np.save('./results/plot/' + name + "pred_mean.npy", pred_mean)
+        np.save('./results/plot/' + name + "diff_mean.npy", diff_mean)
+        np.save('./results/plot/' + name + "rms2d_mean.npy", rms2d_mean)
+        np.save('./results/plot/' + name + "mae2d_mean.npy", mae2d_mean)
+        np.save('./results/plot/' + name + "pred_err.npy", pred_err)
+        np.save('./results/plot/' + name + "diff_histo.npy", diff_histo)
+        np.save('./results/plot/' + name + "rms_histo.npy", rms_histo)
+        np.save('./results/plot/' + name + "pred_list.npy", pred_list)
         if args.fullstats:
             mpl.rcParams['agg.path.chunksize'] = zeroline
 

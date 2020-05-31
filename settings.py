@@ -4,7 +4,7 @@ import glob
 # change often - global variables
 epoch_no = 250
 cuts = 1
-test_set_length = 50#len(glob.glob('./data/test/fakediff/timex/*.tiff'))
+test_set_length = len(glob.glob('./data/test/fakediff/timex/*.tiff'))
 test_size = int(cuts * 2 * test_set_length)
 half_test_size = int(.5*test_size)
 ensemble_runs = 25
@@ -13,7 +13,7 @@ batch_size = 10
 filters = 64
 noise_std = .05
 real_or_fake = 'fake'
-snap = False
+snap = True
 activation = 'sigmoid'
 loss = "mean_absolute_error"
 lr=.001

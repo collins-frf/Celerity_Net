@@ -541,11 +541,9 @@ def load_image(img_path, real, UAS, duckgen, idx, test, issnap):
 def load_snap(img_path, real, UAS, duckgen, idx, test):
 
     #change timex in folder to snap
-    timex_index = img_path.find("timex")
     img_path = list(img_path)
-    img_path[timex_index:(timex_index+4)] = 'snap'
-    img_path = np.delete(img_path, (timex_index+5))
-    img_path[(timex_index+4)] = '/'
+    img_path[7:30] = 'all_snap/'
+    #img_path = np.delete(img_path, 14)
     img_path = "".join(img_path)
     issnap=True
     #load snap w/ same method used to load timex image
