@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from unet import *
-
+import re
 
 def plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean, i, pred_list):
 
@@ -188,10 +188,9 @@ class Predictor(object):
     def main():
         test_dataset = TimexDataset(Dataset)
         test_unet = myUnet()
-        model = test_unet.load_model()
 
-        mae_list, rms_list, greatest_list, ten_list, sixtyfive_list, fifty_list, eighty_list, ninety_list = \
-            ([] for i in range(8))
+        mae_list, rms_list, nrms_list, greatest_list, ten_list, sixtyfive_list, fifty_list, eighty_list, ninety_list = \
+            ([] for i in range(9))
 
         # create lists of 5m downsampled size bathy_rowsxbathy_cols of Test Set Size
         # and Number of Ensemble Runs to average over
@@ -199,74 +198,136 @@ class Predictor(object):
             (np.zeros((bathy_rows, bathy_cols, test_size, ensemble_runs)) for i in range(4))
         diff_list, mae2d_list = \
             (np.zeros((bathy_rows, bathy_cols-downsample_zeroline, test_size, ensemble_runs)) for i in range(2))
+        #img_batch, label_batch = test_unet.get_batch(test_dataset, train_flag='test')
         for i in range(ensemble_runs):
+            model = test_unet.load_model()
+
+            if args.activations:
+                layers_to_viz = [3, 4, 12, 21, 30, 47, 56, 65, 72]
+                outputs = [model.layers[i + 1].output for i in layers_to_viz]
+                model = tf.keras.Model(inputs=model.inputs, outputs=outputs)
+
+            if i == 0:
+                model.summary()
+            tf.keras.backend.set_learning_phase(0)
+            for layer in model.layers:
+                layer.stddev = noise_std
+            print("noise std: ", model.layers[5].stddev)
+
             img_batch, label_batch = test_unet.get_batch(test_dataset, train_flag='test')
             print("Ensemble Run #: ", i)
-            """for j in range(len(img_batch)):
-                if j % 100 == 0:
-                    image = img_batch[j]
-                    label = label_batch[j]
-                    print(j)
-                    print(np.shape(image))
-                    print(np.shape(label))
-                    fig = plt.figure()
-                    X = np.linspace(0, img_cols, img_cols)
-                    Y = np.linspace(0, img_rows, img_rows)
-                    cs_labels = ["-8m", "-7.5m", "-7m", "-6.5m", "-6m", "-5.5m", "-5m", "-4.5m", "-4m", "-3.5m",
-                                 "-3m", "-2.5m", "-2m", "-1.5m", "-1m", "-.5m", "0m"]
-                    fmt = {}
-                    for f, s in zip(
-                            [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
-                            cs_labels):
-                        fmt[f] = s
-                    ax0 = fig.add_subplot(1, 2, 1), plt.imshow(image[:, :img_cols, 0])
-                    cs = ax0[0].contour(X, Y, np.where(label[:, :img_cols, 0] > .1, 0, label[:, :img_cols, 0]), vmin=-6,
-                                        vmax=2, alpha=.5,
-                                        colors=['white', 'white', 'white', 'white', 'white', 'white', 'white',
-                                                'white', 'white', 'white', 'white', 'white', 'white', 'white',
-                                                'white', 'white', 'black'],
-                                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2,
-                                                -1.5, -1, -.5, -.01],
-                                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed',
-                                                    'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed',
-                                                    'solid', 'dashed', 'solid', 'dashed', 'solid'],
-                                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5,
-                                                    1.5, .5, 2])
-                    ax0[0].clabel(cs,
-                                  [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5,
-                                   -.01], fmt=fmt, inline_spacing=2, fontsize='small', )
-                    ax1 = fig.add_subplot(1, 2, 2), plt.imshow(label[:, :img_cols, 0], cmap='gist_earth', vmin=-6,
-                                                               vmax=1)
-                    cs = ax1[0].contour(X, Y, np.where(label[:, :img_cols, 0] > .1, 0, label[:, :img_cols, 0]), vmin=-6,
-                                        vmax=2, alpha=1,
-                                        colors=['white', 'white', 'white', 'white', 'white', 'white', 'white',
-                                                'white', 'white', 'white', 'white', 'white', 'white', 'white',
-                                                'white', 'white', 'black'],
-                                        levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2,
-                                                -1.5, -1, -.5, -.01],
-                                        linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed',
-                                                    'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed',
-                                                    'solid', 'dashed', 'solid', 'dashed', 'solid'],
-                                        linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5,
-                                                    1.5, .5, 2])
-                    ax1[0].clabel(cs,
-                                  [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5,
-                                   -.01], fmt=fmt, inline_spacing=2, fontsize='small', )
-                    plt.show()"""
 
             # make a prediction on the entire test set
             predictions = model.predict(img_batch, batch_size=1, verbose=1)
-            np.save('./results/' + name + '.npy', predictions)
+
+            if args.activations:
+            # plot the output from each block
+                """square = 4
+                X = np.linspace(0, img_cols, img_cols)
+                Y = np.linspace(0, img_rows, img_rows)
+                cs_labels = ["-8m", "-7.5m", "-7m", "-6.5m", "-6m", "-5.5m", "-5m", "-4.5m", "-4m", "-3.5m",
+                             "-3m", "-2.5m", "-2m", "-1.5m", "-1m", "-.5m", "0m"]
+                fmt = {}
+                for f, s in zip(
+                        [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -.5, -.01],
+                        cs_labels):
+                    fmt[f] = s
+                l=0
+                batch1 = predictions[0]
+                gauss1 = predictions[1]
+
+                pred = predictions[-1]
+                pred = pred[0, :, :, 0]
+
+                for fmap in predictions:
+                    # plot all 64 maps in an 8x8 squares
+                    ix = 1
+                    for _ in range(square):
+                        for _ in range(square):
+                            # specify subplot and turn of axis
+                            ax = plt.subplot(square, square, ix)
+                            ax.set_xticks([])
+                            ax.set_yticks([])
+                            # plot filter channel in grayscale
+                            if ix == 1:
+                                plt.imshow(img_batch[0, :, :img_cols, 0], cmap='gray')
+                                plt.title("Timex")
+                            elif ix == 5:
+                                plt.imshow(img_batch[0, :, :img_cols, 1], cmap='gray')
+                                plt.title("Snap")
+                            elif ix == 9:
+                                plt.imshow(label_batch[0, :, :img_cols, 0], cmap='gist_earth', vmin=-6, vmax=1)
+                                cs = ax.contour(X, Y, np.where(label_batch[0, :, :img_cols, 0] > .1, 0, label_batch[0, :, :img_cols, 0]),
+                                                    vmin=-6,
+                                                    vmax=2, alpha=.5,
+                                                    colors=['white', 'white', 'white', 'white', 'white', 'white',
+                                                            'white',
+                                                            'white', 'white', 'white', 'white', 'white', 'white',
+                                                            'white',
+                                                            'white', 'white', 'black'],
+                                                    levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5,
+                                                            -2,
+                                                            -1.5, -1, -.5, -.01],
+                                                    linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed',
+                                                                'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed',
+                                                                'solid', 'dashed', 'solid', 'dashed', 'solid'],
+                                                    linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5,
+                                                                1.5, .5,
+                                                                1.5, .5, 2])
+                                ax.clabel(cs,
+                                              [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1,
+                                               -.5,
+                                               -.01], fmt=fmt, inline_spacing=2, fontsize='small', )
+                                plt.title("Label")
+                            elif ix == 13:
+                                plt.imshow(pred[:, :img_cols], cmap='gist_earth', vmin=-6, vmax=1)
+                                cs = ax.contour(X, Y, np.where(pred[:, :img_cols] > .1, 0, pred[:, :img_cols]),
+                                                    vmin=-6,
+                                                    vmax=2, alpha=.5,
+                                                    colors=['white', 'white', 'white', 'white', 'white', 'white',
+                                                            'white',
+                                                            'white', 'white', 'white', 'white', 'white', 'white',
+                                                            'white',
+                                                            'white', 'white', 'black'],
+                                                    levels=[-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5,
+                                                            -2,
+                                                            -1.5, -1, -.5, -.01],
+                                                    linestyles=['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed',
+                                                                'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed',
+                                                                'solid', 'dashed', 'solid', 'dashed', 'solid'],
+                                                    linewidths=[1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5, 1.5, .5,
+                                                                1.5, .5,
+                                                                1.5, .5, 2])
+                                ax.clabel(cs,
+                                              [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1,
+                                               -.5,
+                                               -.01], fmt=fmt, inline_spacing=2, fontsize='small', )
+                                plt.title("Pred")
+                            else:
+                                try:
+                                    plt.imshow(fmap[0, :, :, ix - 1], cmap='gray')
+                                    plt.title(model.layers[(layers_to_viz[l])].name, )
+                                except:
+                                    plt.imshow(batch1[0, :, :, ix - 1] - gauss1[0, :, :, ix-1], cmap='gray')
+                                    plt.title("batch1 - gauss1")
+                            ix += 1
+                    l+=1
+                    # show the figure
+                    plt.show()"""
+                continue
+            else:
+                np.save('./results/' + name + '.npy', predictions)
 
             # calculate mean mae, mean bias, 10%tile error, 50%, 65%, 80%, 90%, greatest error,
             # also return the 2d means of pred, bias, and mae over the test set
-            runmae, meanrms, ten_percent, fifty_percent, sixtyfive_percent, eighty_percent, ninety_percent, \
+            runmae, meanrms, meannrms, ten_percent, fifty_percent, sixtyfive_percent, eighty_percent, ninety_percent, \
             greatest_error, pred_cube, diff_cube, mae_cube, label_cube, timex_cube, snap_cube \
                 = predict.calc_stats(img_batch, label_batch)
 
             # add each value to a list to expand over each ensemble run
             mae_list = np.append(mae_list, runmae)
             rms_list = np.append(rms_list, meanrms)
+            nrms_list = np.append(nrms_list, meannrms)
             ninety_list = np.append(ninety_list, ninety_percent)
 
             # add each test set cube to a list over each ensemble run
@@ -317,11 +378,13 @@ class Predictor(object):
         model_mae = np.mean(mae_list)
         mae_err = 2*np.std(mae_list)
         model_rms = np.mean(rms_list)
+        model_nrms = np.mean(nrms_list)
         rms_err = 2*np.std(rms_list)
         model_ninetyerror = np.mean(ninety_list)
         print("Model median ae: ", model_mae)
         print("Model mae uncertainty: ", mae_err)
         print("Model rmse: ", model_rms)
+        print("Model nrmse: ", model_nrms)
         print("Model rmse uncertainty: ", rms_err)
         print("Model 90 error: ", model_ninetyerror)
 
@@ -348,7 +411,7 @@ class Predictor(object):
 #            plt.imshow(within_2d[:, :, l])
 #            plt.show()
 #            l+=10
-        print("within %: ", np.sum(within_2d)/(bathy_rows*bathy_cols*half_test_size))
+        print("within %: ", np.sum(within_2d[:, 20:, :])/(bathy_rows*(bathy_cols-20)*half_test_size))
 
         # plot full stats, individual uncertainty, or individual predictions based on args
         predict.plot(img_mean, label_mean, pred_mean, diff_mean, rms2d_mean, mae2d_mean,
@@ -365,8 +428,8 @@ class Predictor(object):
         preds = np.load('./results/' + name + '.npy')
 
         # create lists for each statistic across the test set for this ensemble run
-        runmae_list, runrms_list, greatest_error_list, ten_percent_list, twentyfive_percent_list, \
-            fifty_percent_list, eighty_percent_list, ninety_percent_list = ([] for i in range(8))
+        runmae_list, runrms_list, runnrms_list, greatest_error_list, ten_percent_list, twentyfive_percent_list, \
+            fifty_percent_list, eighty_percent_list, ninety_percent_list = ([] for i in range(9))
 
         # create cube for each object (timex, label, pred) and spatial derivatives for plotting
         timex_cube, snap_cube, label_cube, pred_cube = (np.zeros((bathy_rows, bathy_cols, np.size(preds,0))) for i in range(4))
@@ -468,8 +531,10 @@ class Predictor(object):
 
             offshore_cutoff = np.sum(np.any(label > -.01, axis=0))
             mae = np.power(np.power((pred[:, downsample_zeroline:]-label[:, downsample_zeroline:]), 2), .5)
-            rms = np.power(np.sum(np.power(((pred[:, offshore_cutoff:]-label[:, offshore_cutoff:])/(-label[:, offshore_cutoff:])), 2))*
+            nrms = np.power(np.sum(np.power(((pred[:, offshore_cutoff:]-label[:, offshore_cutoff:])/(-label[:, offshore_cutoff:])), 2))*
                            (1/(bathy_rows*(bathy_cols-offshore_cutoff))), .5)
+            rms = np.power(np.sum(np.power(((pred[:, offshore_cutoff:] - label[:, offshore_cutoff:])), 2)) *
+                           (1 / (bathy_rows * (bathy_cols - offshore_cutoff))), .5)
             difference = pred[:, downsample_zeroline:] - label[:, downsample_zeroline:]
 
             diff_cube[:, :, i] = difference
@@ -485,6 +550,7 @@ class Predictor(object):
 
             runmae_list = np.append(runmae_list, runmae)
             runrms_list = np.append(runrms_list, rms)
+            runnrms_list = np.append(runnrms_list, nrms)
             greatest_error_list = np.append(greatest_error_list, greatest_error)
             ten_percent_list = np.append(ten_percent_list, ten_percent)
             twentyfive_percent_list = np.append(twentyfive_percent_list, twentyfive_percent)
@@ -496,6 +562,7 @@ class Predictor(object):
 
         model_mae = np.mean(runmae_list)
         model_rms = np.mean(runrms_list)
+        model_nrms = np.mean(runnrms_list)
         model_greatesterror = np.mean(greatest_error_list)
         model_tenerror = np.mean(ten_percent_list)
         model_sixtyerror = np.mean(twentyfive_percent_list)
@@ -503,7 +570,7 @@ class Predictor(object):
         model_eightyerror = np.mean(eighty_percent_list)
         model_ninetyerror = np.mean(ninety_percent_list)
 
-        return model_mae, model_rms, model_tenerror, model_fiftyerror, \
+        return model_mae, model_rms, model_nrms, model_tenerror, model_fiftyerror, \
                model_sixtyerror, model_eightyerror, model_ninetyerror, model_greatesterror, \
                pred_cube, diff_cube, mae_cube, label_cube, timex_cube, snap_cube
 
@@ -708,6 +775,7 @@ if __name__ == '__main__':
     parser.add_argument('-iu', '--indiv_uncertain', action='store_true',
                         help="print out examples of individual uncertainty")
     parser.add_argument('-ips', '--indiv_pred_show', action='store_true', help="graphs indiv_preds")
+    parser.add_argument('-act', '--activations', action='store_true', help="check activations instead of predict")
 
     args = parser.parse_args()
     predict = Predictor()

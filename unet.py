@@ -101,10 +101,11 @@ class myUnet(object):
 
         #512
         inputs = tf.keras.layers.Input((self.img_rows, self.img_cols, self.bands))
-        conv1 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(inputs)
+        conv1 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(inputs)
         conv1 = tf.keras.layers.BatchNormalization(trainable=True)(conv1)
-        conv1 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv1)
+        conv1 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv1)
         conv1 = tf.keras.layers.BatchNormalization(trainable=True)(conv1)
+        conv1 = tf.keras.layers.GaussianNoise(noise_std)(conv1)
         pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(conv1)
 
         #256
@@ -114,6 +115,7 @@ class myUnet(object):
         conv2 = tf.keras.layers.BatchNormalization(trainable=True)(conv2)
         conv2 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv2)
         conv2 = tf.keras.layers.BatchNormalization(trainable=True)(conv2)
+        conv2 = tf.keras.layers.GaussianNoise(noise_std)(conv2)
         drop2 = tf.keras.layers.Dropout(0.1)(conv2, training=True)
         pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop2)
 
@@ -124,6 +126,7 @@ class myUnet(object):
         conv3 = tf.keras.layers.BatchNormalization(trainable=True)(conv3)
         conv3 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv3)
         conv3 = tf.keras.layers.BatchNormalization(trainable=True)(conv3)
+        conv3 = tf.keras.layers.GaussianNoise(noise_std)(conv3)
         drop3 = tf.keras.layers.Dropout(0.1)(conv3, training=True)
         pool3 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop3)
 
@@ -134,6 +137,7 @@ class myUnet(object):
         conv4 = tf.keras.layers.BatchNormalization(trainable=True)(conv4)
         conv4 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv4)
         conv4 = tf.keras.layers.BatchNormalization(trainable=True)(conv4)
+        conv4 = tf.keras.layers.GaussianNoise(noise_std)(conv4)
         drop4 = tf.keras.layers.Dropout(0.1)(conv4, training=True)
         pool4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop4)
 
@@ -156,6 +160,7 @@ class myUnet(object):
         conv6 = tf.keras.layers.Conv2DTranspose(filters, 3, (2, 2), activation=activation, padding='same',
                                                 kernel_initializer='he_normal')((conv6))
         conv6 = tf.keras.layers.BatchNormalization(trainable=True)(conv6)
+        conv6 = tf.keras.layers.GaussianNoise(noise_std)(conv6)
         drop6 = tf.keras.layers.Dropout(0.1)(conv6, training=True)
 
         #filters
@@ -167,6 +172,7 @@ class myUnet(object):
         conv7 = tf.keras.layers.Conv2DTranspose(filters, 3, (2, 2), activation=activation, padding='same',
                                                 kernel_initializer='he_normal')((conv7))
         conv7 = tf.keras.layers.BatchNormalization(trainable=True)(conv7)
+        conv7 = tf.keras.layers.GaussianNoise(noise_std)(conv7)
         drop7 = tf.keras.layers.Dropout(0.1)(conv7, training=True)
 
         #256
@@ -178,27 +184,20 @@ class myUnet(object):
         conv8 = tf.keras.layers.Conv2DTranspose(filters, 3, (2, 2), activation=activation, padding='same',
                                                 kernel_initializer='he_normal')((conv8))
         conv8 = tf.keras.layers.BatchNormalization(trainable=True)(conv8)
+        conv8 = tf.keras.layers.GaussianNoise(noise_std)(conv8)
         drop8 = tf.keras.layers.Dropout(0.1)(conv8, training=True)
 
         #512
         merge9 = tf.keras.layers.concatenate([conv1, drop8], axis=3)
-        conv9 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge9)
-        conv9 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
-        conv9 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
+        conv9 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(merge9)
+        conv9 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
+        conv9 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv9)
         conv9 = tf.keras.layers.Conv2D(1, 3, activation=None, padding='same', kernel_initializer='he_normal')(conv9)
         conv10 = tf.keras.layers.Conv2D(1, 1, activation=None)(conv9)
 
-        model = keras.models.Model(inputs=inputs, outputs=conv10)
+        model = keras.models.Model(inputs=inputs, outputs=[conv10])
         model.compile(optimizer=optimizer, loss=loss, metrics=[absolute_error, pred_max, pred_min])
 
-        #layers_name = ['dropout', 'dropout_1', 'dropout_2', 'dropout_3', 'dropout_4', 'dropout_5', 'dropout_6',
-        #                'conv2d_23']
-        #outputs = [layer.output for layer in model.layers if layer.name in layers_name]
-
-        #model = keras.models.Model(inputs=inputs, outputs=outputs)
-        #model.compile(optimizer=optimizer, loss=loss, metrics=[absolute_error, pred_max, pred_min])
-
-        tf.summary
         return model
 
     def get_batch(self, timex_dataset, train_flag):
@@ -297,7 +296,7 @@ class myUnet(object):
     def load_model(self):
 
         try:
-            my_model = keras.models.load_model('./results/'+ name+ 'iter.h5', custom_objects={
+            my_model = keras.models.load_model('./results/'+ name+ 'val_loss.h5', custom_objects={
             'absolute_error': absolute_error,
             'pred_max': pred_max,
             'pred_min': pred_min,})
@@ -319,7 +318,6 @@ class myUnet(object):
                 tf.keras.backend.set_value(my_model.optimizer.lr, .00001)
                 print("New LR for finetuning: " + str(tf.keras.backend.get_value(my_model.optimizer.lr)))
 
-        my_model.summary()
         return my_model
 
     def validate(self, epoch, timex_dataset, model):
@@ -355,7 +353,8 @@ class myUnet(object):
         timex_dataset = TimexDataset(Dataset)
         model = self.load_model()
         #tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True, rankdir='TB', dpi=96)
-
+        model.summary()
+        tf.keras.backend.set_learning_phase(1)
         # train for epoch_no epochs
         epoch=1
         # validate before train

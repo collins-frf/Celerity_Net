@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import mpl_scatter_density
 import numpy as np
+import os
 import pydot
 import pywick
 import scipy.interpolate as interp
@@ -85,7 +86,10 @@ def uniform_noise(g_source):
     g_source[:, :, :, :-1] = g_source[:, :, :, :-1] / 255
     noise = np.random.normal(0, noise_std)
     image = g_source
-    image[:, :, :, :-1] = g_source[:, :, :, :-1] + noise
+    if snap:
+        image[:, :, :, 0] = g_source[:, :, :, 0] + noise
+    else:
+        image[:, :, :, 0] = g_source[:, :, :, 0] + noise
     image = np.where(image < 0, 0, image)
 
     return image
@@ -359,6 +363,11 @@ def find_bathy(self, img_path, idx):
     real = False
     duckgen = False
     bathy_index = img_path.find("_bathy_")
+    if os.name == 'nt':
+        slash = '\\'
+    else:
+        slash = '/'
+
 
     # if bathy is not in filename, means either rbathy or real image
     if bathy_index == -1:
@@ -370,14 +379,15 @@ def find_bathy(self, img_path, idx):
             str_index = ''
             index = img_path[-52:-49]
             year = img_path[-32:-28]
+            year = img_path[-32:-28]
             index, str_index = month_to_num(index, str_index)
             index = int(index)
         else:
             index = img_path[:bathy_index]
             index = index[-3:]
-            if index[0] == '\\':
+            if index[0] == slash:
                 index = index[1:]
-            if index[1] == '\\':
+            if index[1] == slash:
                 index = index[2]
             index = int(index)
     # if its bathy just load it up
@@ -385,9 +395,9 @@ def find_bathy(self, img_path, idx):
         index = img_path[:bathy_index]
         index = index[-3:]
 
-        if index[0] == '\\':
+        if index[0] == slash:
             index = index[1:]
-        if index[1] == '\\':
+        if index[1] == slash:
             index = index[2]
         index = int(index)
 
@@ -540,11 +550,18 @@ def load_image(img_path, real, UAS, duckgen, idx, test, issnap):
 # load tif snap in same method as load_image
 def load_snap(img_path, real, UAS, duckgen, idx, test):
 
-    #change timex in folder to snap
-    img_path = list(img_path)
-    img_path[7:30] = 'all_snap/'
-    #img_path = np.delete(img_path, 14)
-    img_path = "".join(img_path)
+    if test:
+        #change timex in folder to snap
+        img_path = list(img_path)
+        img_path[7:27] = 'all_snap/'
+        #img_path = np.delete(img_path, 14)
+        img_path = "".join(img_path)
+    else:
+        #change timex in folder to snap
+        img_path = list(img_path)
+        img_path[7:30] = 'all_snap/'
+        #img_path = np.delete(img_path, 14)
+        img_path = "".join(img_path)
     issnap=True
     #load snap w/ same method used to load timex image
     snap = load_image(img_path, real, UAS, duckgen, idx, test, issnap)
@@ -608,7 +625,7 @@ class TimexDataset(Dataset):
         img_path, idx, test = train_or_test(self, idx)
 
         #if testing on the one UAV image we have:
-        if img_path == './data/test\Combo_Timex.png':
+        if img_path == './data/test/Combo_Timex.png':
             real, duckgen, UAS, label = uas_handle()
         else:
             UAS = False
@@ -641,10 +658,10 @@ class TimexDataset(Dataset):
         g_source = image
         seed = np.random.random()
         if test:
-            # image[:, :, :, :-1] = image[:, :, :, :-1] / 255
-            image = uniform_noise(g_source)
-            # image = gaussian_noise(g_source)
-            # image = histogram_match(g_source, seed)
+            image[:, :, :, :-1] = image[:, :, :, :-1] / 255
+            #image = uniform_noise(g_source)
+            #image = gaussian_noise(g_source)
+            #image = histogram_match(g_source, seed)
         else:
             image[:, :, :, :-1] = image[:, :, :, :-1] / 255
 

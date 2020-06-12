@@ -4,21 +4,21 @@ import glob
 # change often - global variables
 epoch_no = 250
 cuts = 1
-test_set_length = len(glob.glob('./data/test/fakediff/timex/*.tiff'))
+test_set_length = 25#len(glob.glob('./data/test/fakediff/timex/*.tiff'))
 test_size = int(cuts * 2 * test_set_length)
 half_test_size = int(.5*test_size)
 ensemble_runs = 25
 val_size = 300
-batch_size = 10
+batch_size = 8
 filters = 64
 noise_std = .05
 real_or_fake = 'fake'
 snap = True
 activation = 'sigmoid'
-loss = "mean_absolute_error"
+loss = "mean_squared_error"
 lr=.001
 optimizer = tf.keras.optimizers.Nadam(lr=lr, beta_1=.9, beta_2=.999, epsilon=1e-7, schedule_decay=.004)
-name = loss + str(lr) +"_"+ activation +"_snap=" +str(snap) + "_" + str(filters) +"_nohe_"
+name = loss + str(lr) +"_"+ activation +"_snap=" +str(snap) + "_" + str(filters) +"_noise_"
 #name = "mean_absolute_error0.0001_sigmoid_snap_64"
 logs_path = "./runs/" + name
 
@@ -57,8 +57,8 @@ UAS_image_resize_height = 1000
 UAS_image_resize_width = 500
 
 # select column to grab square image from in 1500x500 image/label
-north_bound = [np.random.randint(0, 1488) for i in range(4000)]
-
+#north_bound = [np.random.randint(0, 1488) for i in range(4000)]
+north_bound = [500 for i in range(4000)]
 # shift by this much
 duckgen_offset = 65
 synthetic_offset = 165
