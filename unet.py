@@ -356,7 +356,7 @@ class myUnet(object):
         model.summary()
         tf.keras.backend.set_learning_phase(1)
         # train for epoch_no epochs
-        epoch=1
+        epoch=0
         # validate before train
         self.validate(epoch, timex_dataset, model)
 

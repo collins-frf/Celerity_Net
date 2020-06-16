@@ -222,7 +222,7 @@ class Predictor(object):
 
             if args.activations:
             # plot the output from each block
-                """square = 4
+                square = 4
                 X = np.linspace(0, img_cols, img_cols)
                 Y = np.linspace(0, img_rows, img_rows)
                 cs_labels = ["-8m", "-7.5m", "-7m", "-6.5m", "-6m", "-5.5m", "-5m", "-4.5m", "-4m", "-3.5m",
@@ -313,7 +313,7 @@ class Predictor(object):
                             ix += 1
                     l+=1
                     # show the figure
-                    plt.show()"""
+                    plt.show()
                 continue
             else:
                 np.save('./results/' + name + '.npy', predictions)
@@ -418,7 +418,7 @@ class Predictor(object):
                      pred_err, diff_histo, rms_histo, pred_list)
 
         # save plots of individual predictions for each image in test set in a gif
-        imageio.mimsave('./' + name + '.gif', [plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean,
+        imageio.mimsave('./' + name + str(noise_std) + '.gif', [plot_for_gif(img_mean, snap_mean, label_mean, pred_mean, diff_mean,
                                                             i, pred_list) for i in range(half_test_size)], fps=.5)
 
     @staticmethod

@@ -621,40 +621,42 @@ class TimexDataset(Dataset):
         self.duckgen_bathy.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
         self.measured_bathy.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
 
-        #use idx to identify to pull train or test data
+        # use idx to identify to pull train or test data
         img_path, idx, test = train_or_test(self, idx)
 
-        #if testing on the one UAV image we have:
+        # if testing on the one UAV image we have:
         if img_path == './data/test/Combo_Timex.png':
             real, duckgen, UAS, label = uas_handle()
         else:
             UAS = False
             label, real, duckgen = find_bathy(self, img_path, idx)
 
-        #find wave conditions from lookup table
+        # find wave conditions from lookup table
         hs, d, f = set_cond(img_path)
 
-        #load timex image
+        # load timex image
         image = load_image(img_path, real, UAS, duckgen, idx, test, issnap=False)
 
-        #load snapshot image if desired
+        # load snapshot image if desired
         if snap:
             snap_image = load_snap(img_path, real, UAS, duckgen, idx, test)
 
-        #create an additional channel with slope, wave height direction and period information in each quadrant
+        # create an additional channel with slope, wave height direction and period information in each quadrant
         info_channel = add_channel(label, hs, d, f)
 
-        #add snap to 2nd channel if desired
+        # add snap to 2nd channel if desired
         if snap:
             image = np.concatenate((image, snap_image), axis=3)
 
-        #add additional channel to image
+        # add additional channel to image
         image = np.concatenate((image, info_channel), axis=3)
 
-        #convert to float32
+        # convert to float32
+        if snap_only:
+            image = np.concatenate((snap, info_channel), axis=3)
         image = np.full(image.shape, image, dtype='float32')
 
-        #normalize the grayscale channels
+        # normalize the grayscale channels
         g_source = image
         seed = np.random.random()
         if test:
@@ -665,11 +667,11 @@ class TimexDataset(Dataset):
         else:
             image[:, :, :, :-1] = image[:, :, :, :-1] / 255
 
-        #add zeros in image/label from the shoreline according to zeroline setting
+        # add zeros in image/label from the shoreline according to zeroline setting
         image[:, :, :zeroline, :] = 0
         label[:, :zeroline] = 0
 
-        #randomly flip inputs horizontally to increase training data
+        # randomly flip inputs horizontally to increase training data
         randomseed = random()
         if (randomseed > .5) & (not test):
             image = np.flip(image, axis=1)
@@ -677,7 +679,7 @@ class TimexDataset(Dataset):
 
         sample = {'image': image, 'label': label}
 
-        #plot for visualization
+        # plot for visualization
         """print(img_path)
         fig = plt.figure()
         X = np.linspace(0, img_cols, img_cols)
