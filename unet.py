@@ -1,5 +1,12 @@
 # -*- coding:utf-8 -*-
 from data import *
+from losses import *
+from settings import *
+from torch.utils.data.dataset import Dataset  # For custom data-sets
+import argparse
+import numpy as np
+import tensorflow.keras as keras
+import tensorflow as tf
 
 
 class myUnet(object):
@@ -9,7 +16,7 @@ class myUnet(object):
         self.fail_counter = 0
         self.img_rows = 512
         self.img_cols = 512
-        if snap:
+        if snap and not snap_only:
             self.bands = 3
         else:
             self.bands = 2
@@ -99,7 +106,7 @@ class myUnet(object):
 
     def get_newnet(self):
 
-        #512
+        # 512
         inputs = tf.keras.layers.Input((self.img_rows, self.img_cols, self.bands))
         conv1 = tf.keras.layers.Conv2D(64, 3, activation=activation, padding='same', kernel_initializer='he_normal')(inputs)
         conv1 = tf.keras.layers.BatchNormalization(trainable=True)(conv1)
@@ -108,7 +115,7 @@ class myUnet(object):
         conv1 = tf.keras.layers.GaussianNoise(noise_std)(conv1)
         pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(conv1)
 
-        #256
+        # 256
         conv2 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool1)
         conv2 = tf.keras.layers.BatchNormalization(trainable=True)(conv2)
         conv2 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv2)
@@ -119,7 +126,7 @@ class myUnet(object):
         drop2 = tf.keras.layers.Dropout(0.1)(conv2, training=True)
         pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop2)
 
-        #filters
+        # 128
         conv3 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool2)
         conv3 = tf.keras.layers.BatchNormalization(trainable=True)(conv3)
         conv3 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv3)
@@ -130,7 +137,7 @@ class myUnet(object):
         drop3 = tf.keras.layers.Dropout(0.1)(conv3, training=True)
         pool3 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop3)
 
-        #filters
+        # 64
         conv4 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool3)
         conv4 = tf.keras.layers.BatchNormalization(trainable=True)(conv4)
         conv4 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv4)
@@ -141,7 +148,7 @@ class myUnet(object):
         drop4 = tf.keras.layers.Dropout(0.1)(conv4, training=True)
         pool4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop4)
 
-        #32
+        # 32
         conv5 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(pool4)
         conv5 = tf.keras.layers.BatchNormalization(trainable=True)(conv5)
         conv5 = tf.keras.layers.Conv2D(filters, 3, activation=activation, padding='same', kernel_initializer='he_normal')(conv5)
@@ -296,10 +303,16 @@ class myUnet(object):
     def load_model(self):
 
         try:
-            my_model = keras.models.load_model('./results/'+ name+ 'val_loss.h5', custom_objects={
-            'absolute_error': absolute_error,
-            'pred_max': pred_max,
-            'pred_min': pred_min,})
+            if __name__ == '__main__':
+                my_model = keras.models.load_model('./results/'+ name + 'iter.h5', custom_objects={
+                'absolute_error': absolute_error,
+                'pred_max': pred_max,
+                'pred_min': pred_min,})
+            else:
+                my_model = keras.models.load_model('./results/'+ name+ 'val_loss.h5', custom_objects={
+                'absolute_error': absolute_error,
+                'pred_max': pred_max,
+                'pred_min': pred_min,})
             print("loaded chk")
 
         except:
@@ -356,7 +369,8 @@ class myUnet(object):
         model.summary()
         tf.keras.backend.set_learning_phase(1)
         # train for epoch_no epochs
-        epoch=0
+        epoch = 80
+        #tf.keras.backend.set_value(model.optimizer.lr, .0001)
         # validate before train
         self.validate(epoch, timex_dataset, model)
 
@@ -365,7 +379,7 @@ class myUnet(object):
             if epoch == 75:
                 tf.keras.backend.set_value(model.optimizer.lr, .0001)
 
-            #create summary writer for tensorboard
+            # create summary writer for tensorboard
             writer = tf.summary.create_file_writer(logs_path)
 
             # for training set size / batch size each epoch
@@ -386,10 +400,10 @@ class myUnet(object):
                     tf.summary.scalar("Absolute Loss", train_history[1], step=int((((len(timex_dataset)-val_size)*epoch)/batch_size)+i))
                     tf.summary.scalar("LR", model.optimizer.lr, step=int((((len(timex_dataset)-val_size)*epoch)/batch_size)+i))
             writer.flush()
-            #save model at end of each epoch
+            # save model at end of each epoch
             model.save('./results/'+ name+ 'iter.h5', overwrite=True)
             self.validate(epoch, timex_dataset, model)
-            epoch+=1
+            epoch += 1
 
 
 if __name__ == '__main__':

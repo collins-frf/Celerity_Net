@@ -1,13 +1,5 @@
 # -*- coding:utf-8 -*-
-from keras.preprocessing.image import img_to_array, load_img
-import numpy as np
-import glob
-import cv2
-import tensorflow as tf
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import tifffile as tif
-from scipy.io import loadmat
+from data import *
 
 class dataProcess(object):
 	def __init__(self, out_rows, out_cols, train_path = "data/train",
@@ -34,13 +26,13 @@ class dataProcess(object):
 	def split_data(self, slope_array, deep_array, avg_array):
 
 		#load labels using loadmat
-		labelpath = sorted(glob.glob("./bathy/*.mat"))
+		labelpath = sorted(glob.glob("./data/labels/*.mat"))
 
 		for i in labelpath:
 			label = loadmat(i)
 			label = label['B']      
 
-			label = cv2.resize(label, (1075,575), interpolation=cv2.INTER_LINEAR)
+			label = cv2.resize(label, (gen_image_resize_height, gen_image_resize_width), interpolation=cv2.INTER_LINEAR)
 			label = cv2.rotate(label, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
 
 
@@ -49,7 +41,6 @@ class dataProcess(object):
 			#find the 0 farthest to the right for each row
 			slope2index = np.sum(np.any(label2>0, axis=0))
 			shoreslope2 = (np.mean(label2[:,slope2index]) - np.mean(label2[:,-1]))/(512-slope2index)
-			shoreslope2 = shoreslope2*1.68
 			avg_depth2 = (np.mean(label2[:,slope2index:]))
 			print("Slope B: ",shoreslope2)
 			print("Max Depth B: ",np.min(label2))
