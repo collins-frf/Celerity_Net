@@ -559,7 +559,7 @@ def add_channel(label, hs, d, f):
     shoreslope = (shoreline_elevation - offshore_elevation) / (settings.img_cols)
     # apply a stretch of 10 to get values closer to median of .5 of other addtl inputs
     shoreslope = shoreslope*10
-    #shoreslope = 0
+    shoreslope = 0
     # fill shoreline with 0s
     label[:, :settings.zeroline] = 0
 

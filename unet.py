@@ -1,5 +1,4 @@
 # -*- coding:utf-8 -*-
-from data import *
 from losses import *
 from settings import *
 from torch.utils.data.dataset import Dataset  # For custom data-sets
@@ -369,7 +368,7 @@ class myUnet(object):
         model.summary()
         tf.keras.backend.set_learning_phase(1)
         # train for epoch_no epochs
-        epoch = 80
+        epoch = 38
         #tf.keras.backend.set_value(model.optimizer.lr, .0001)
         # validate before train
         self.validate(epoch, timex_dataset, model)

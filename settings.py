@@ -1,10 +1,10 @@
 import glob
 import tensorflow as tf
 import numpy as np
-from data import set_cond
+from data import *
 
 # change often - global variables
-epoch_no = 250
+epoch_no = 200
 cuts = 1
 test_set_length = len(glob.glob('./data/test/fakediff/timex/*.tiff'))
 test_size = int(cuts * 2 * test_set_length)
@@ -21,9 +21,9 @@ activation = 'sigmoid'
 loss = "mean_squared_error"
 lr=.001
 optimizer = tf.keras.optimizers.Nadam(lr=lr, beta_1=.9, beta_2=.999, epsilon=1e-7, schedule_decay=.004)
-name = loss + str(lr) + "_" + activation + "snap=" + str(snap) + "_snap_only=" + str(snap_only) + "_" + str(filters) +"_noise_"
-name2 = loss + str(lr) + "_" + activation + "snap=True_snap_only=True_" + str(filters) +"_noise_"
-name3 = loss + str(lr) + "_" + activation + "snap=False_snap_only=False_" + str(filters) +"_noise_"
+name = loss + str(lr) + "_" + activation + "snap=" + str(snap) + "_snap_only=" + str(snap_only) + "_" + str(filters) +"_noslope_"
+#name2 = loss + str(lr) + "_" + activation + "snap=True_snap_only=True_" + str(filters) +"_noise_"
+#name3 = loss + str(lr) + "_" + activation + "snap=False_snap_only=False_" + str(filters) +"_noise_"
 
 logs_path = "./runs/" + name
 ### interpolation settings
@@ -62,8 +62,8 @@ UAS_image_resize_height = 1000
 UAS_image_resize_width = 500
 
 # select column to grab square image from in 1500x500 image/label
-#north_bound = [np.random.randint(0, 1488) for i in range(4000)]
-north_bound = [500 for i in range(4000)]
+north_bound = [np.random.randint(0, 1488) for i in range(4000)]
+#north_bound = [500 for i in range(4000)]
 # calculate list of WCs to use for error analysis by WC
 wc_list = [set_cond(i) for i in glob.glob('./data/test/fakediff/timex/*.tiff')]
 wc_list = np.asarray(wc_list)
