@@ -364,12 +364,12 @@ class myUnet(object):
     def train(self):
         timex_dataset = TimexDataset(Dataset)
         model = self.load_model()
-        #tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True, rankdir='TB', dpi=96)
         model.summary()
+        
         tf.keras.backend.set_learning_phase(1)
         # train for epoch_no epochs
-        epoch = 38
-        #tf.keras.backend.set_value(model.optimizer.lr, .0001)
+        epoch = 0
+        
         # validate before train
         self.validate(epoch, timex_dataset, model)
 
@@ -400,7 +400,7 @@ class myUnet(object):
                     tf.summary.scalar("LR", model.optimizer.lr, step=int((((len(timex_dataset)-val_size)*epoch)/batch_size)+i))
             writer.flush()
             # save model at end of each epoch
-            model.save('./results/'+ name+ 'iter.h5', overwrite=True)
+            model.save('./results/' + real_or_fake + name + 'iter.h5', overwrite=True)
             self.validate(epoch, timex_dataset, model)
             epoch += 1
 

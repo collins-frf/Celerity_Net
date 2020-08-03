@@ -334,7 +334,7 @@ def train_or_test(self, idx):
             img_path = self.test_generated[idx]
         if settings.real_or_fake == 'real':
             temp = len(self.test_observed)-idx-1
-            img_path = self.test_observed[temp]
+            img_path = self.test_observed[-temp]
     return img_path, idx, test
 
 
@@ -471,7 +471,7 @@ def load_image(img_path, real, UAS, duckgen, idx, test, issnap):
     # crop & interpolation for argus imagery to randomly select a section and get to 1 cell -> 1m resolution
     if real:
         image = cv2.resize(image, (settings.real_image_resize_height, settings.real_image_resize_width), interpolation=cv2.INTER_CUBIC)
-        image = cv2.rotate(image, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
+        image = cv2.rotate(np.float32(image), rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
         new_image = np.zeros((512, 512, 3))
         south = settings.north_bound[idx] + settings.img_rows
         new_image[:, :settings.img_cols, :] = image[settings.north_bound[idx]:south, settings.real_image_offset:(settings.real_image_offset+settings.img_cols), :3]
@@ -584,7 +584,7 @@ class TimexDataset(Dataset):
         self.measured_bathy = glob.glob('./data/labels/measured_bathy/*.mat')
 
         self.test_generated = sorted(glob.glob('./data/test/fakediff/timex/*.tiff'))
-        self.test_observed = sorted(glob.glob('./data/test/300_real_test/timex/*.png'))
+        self.test_observed = sorted(glob.glob('./data/test/real_test/*.png'))
 
         self.transform = transform
 

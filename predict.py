@@ -8,6 +8,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
+argus_timex = np.asarray(Image.open('./data/Compare_Snaps/1513177201.Wed.Dec.13_15_00_01.GMT.2017.argus02b.cx.timex.merge.png'))
+argus_timex_mean = np.mean(argus_timex, axis=2)
+argus_timex_mean = cv2.resize(argus_timex_mean, (real_image_resize_width + 100, real_image_resize_height),
+                             interpolation=cv2.INTER_LINEAR)
+north_bound = 550
+south_bound = north_bound+512
+argus_snap_mean = argus_timex_mean[north_bound:south_bound, 100:(100 + img_cols)]
+g_reference = argus_timex_mean[:, :450]
+
 
 def create_bins(arr, bins, errora, errorb):
     out = np.digitize(arr, bins, right=1)
@@ -59,7 +68,7 @@ class Predictor(object):
 
             # make a prediction on the entire test set
             predictions = model.predict(img_batch, batch_size=1, verbose=1)
-
+            print("hi")
             if args.activations:
                 # plot the output from each block
                 square = 3
@@ -79,9 +88,12 @@ class Predictor(object):
                 pred = predictions[-1]
                 pred = pred[which, :, :, 0]
 
+                img_batch[which, :, :img_cols, 0] = match_histograms(img_batch[which, :, :img_cols, 0], g_reference)
+                img_batch = img_batch.astype('int16')
                 for fmap in predictions:
                     # plot all 64 maps in an 8x8 squares
                     ix = 1
+                    print(l)
                     for _ in range(square):
                         for _ in range(square):
                             # specify subplot and turn of axis
@@ -91,15 +103,11 @@ class Predictor(object):
                             # plot filter channel in grayscale
                             if ix == 1:
                                 plt.imshow(img_batch[which, :, :img_cols, 0], cmap='gray')
-                                plt.title("Timex")
-                            #elif ix == 5:
-                            #    plt.imshow(img_batch[0, :, :img_cols, 1], cmap='gray')
-                            #    plt.title("Snap")
+                                plt.title("Snap")
                             elif ix == 2:
                                 plt.imshow(label_batch[which, :, :img_cols, 0], cmap='gist_earth', vmin=-6, vmax=1)
                                 cs = ax.contour(X, Y, np.where(label_batch[0, :, :img_cols, 0] > .1, 0, label_batch[0, :, :img_cols, 0]),
-                                                    vmin=-6,
-                                                    vmax=2, alpha=.5,
+                                                    vmin=-6, vmax=2, alpha=.5,
                                                     colors=['white', 'white', 'white', 'white', 'white', 'white',
                                                             'white',
                                                             'white', 'white', 'white', 'white', 'white', 'white',
@@ -120,10 +128,11 @@ class Predictor(object):
                                                -.01], fmt=fmt, inline_spacing=2, fontsize='small', )
                                 plt.title("Label")
                             elif ix == 3:
+                                pred = cv2.blur(pred, (25, 25))
+                                pred = np.where(pred > 0, 0, pred)
                                 plt.imshow(pred[:, :img_cols], cmap='gist_earth', vmin=-6, vmax=1)
                                 cs = ax.contour(X, Y, np.where(pred[:, :img_cols] > .1, 0, pred[:, :img_cols]),
-                                                    vmin=-6,
-                                                    vmax=2, alpha=.5,
+                                                    vmin=-6, vmax=2, alpha=.5,
                                                     colors=['white', 'white', 'white', 'white', 'white', 'white',
                                                             'white',
                                                             'white', 'white', 'white', 'white', 'white', 'white',
@@ -142,14 +151,14 @@ class Predictor(object):
                                               [-8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1,
                                                -.5,
                                                -.01], fmt=fmt, inline_spacing=2, fontsize='small', )
-                                plt.title("Pred")
+                                plt.title("Prediction")
                             else:
-                                try:
-                                    plt.imshow(fmap[which, :, :, ix - 1], cmap='gray')
-                                    plt.title(model.layers[(layers_to_viz[l])].name, )
-                                except:
-                                    plt.imshow(batch1[0, :, :, ix - 1] - gauss1[0, :, :, ix-1], cmap='gray')
-                                    plt.title("batch1 - gauss1")
+                                #try:
+                                plt.imshow(fmap[which, :, :, ix - 1], cmap='gray')
+                                #    plt.title(model.layers[(layers_to_viz[l])].name, )
+                                #except:
+                                #    plt.imshow(batch1[0, :, :, ix - 1] - gauss1[0, :, :, ix-1], cmap='gray')
+                                #    plt.title("batch1 - gauss1")
                             ix += 1
                     l+=1
                     # show the figure
@@ -253,15 +262,26 @@ class Predictor(object):
         diff1d = diff_mean.flatten()
         within1d = within_2d.flatten()
 
-        U_bins = [.1, .2, .3, .4, .5, .6, .7, .8, .9, 10]
-        H_bins = [1.0, 1.4, 1.8, 3.0]
-        D_bins = [65, 80, 95, 120]
-        F_bins = [.1, .12, .14, .18]
-        U_bin, U_mae, _ = create_bins(uc1d, U_bins, mae1d, mae1d)
-        H_bin, H_rms, H_bias = create_bins(wc_list[:, 0], H_bins, rms_histo, diff_histo)
-        D_bin, D_rms, D_bias = create_bins(wc_list[:, 1], D_bins, rms_histo, diff_histo)
-        F_bin, F_rms, F_bias = create_bins(wc_list[:, 2], F_bins, rms_histo, diff_histo)
-
+        if real_or_fake == 'fake':
+            U_bins = [.1, .2, .3, .4, .5, .6, .7, .8, .9, 10]
+            H_bins = [1.0, 1.4, 1.8, 3.0]
+            D_bins = [65, 80, 95, 120]
+            F_bins = [.1, .12, .14, .18]
+            U_bin, U_mae, _ = create_bins(uc1d, U_bins, mae1d, mae1d)
+            H_bin, H_rms, H_bias = create_bins(wc_list[:, 0], H_bins, rms_histo, diff_histo)
+            D_bin, D_rms, D_bias = create_bins(wc_list[:, 1], D_bins, rms_histo, diff_histo)
+            F_bin, F_rms, F_bias = create_bins(wc_list[:, 2], F_bins, rms_histo, diff_histo)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "U_bin.npy", U_bin)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "U_mae.npy", U_mae)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "H_bin.npy", H_bin)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "H_rms.npy", H_rms)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "H_bias.npy", H_bias)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "D_bin.npy", D_bin)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "D_rms.npy", D_rms)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "D_bias.npy", D_bias)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "F_bin.npy", F_bin)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "F_rms.npy", F_rms)
+            np.save('./results/plot/' + name + str(ensemble_runs) + "F_bias.npy", F_bias)
         np.save('./results/plot/' + name  + str(ensemble_runs)+ "img_mean.npy", img_mean)
         np.save('./results/plot/' + name  + str(ensemble_runs)+ "snap_mean.npy", snap_mean)
         np.save('./results/plot/' + name  + str(ensemble_runs)+ "label_mean.npy", label_mean)
@@ -278,17 +298,7 @@ class Predictor(object):
         np.save('./results/plot/' + name + str(ensemble_runs) + "mae1d.npy", mae1d)
         np.save('./results/plot/' + name + str(ensemble_runs) + "diff1d.npy", diff1d)
         np.save('./results/plot/' + name + str(ensemble_runs) + "within1d.npy", within1d)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "U_bin.npy", U_bin)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "U_mae.npy", U_mae)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "H_bin.npy", H_bin)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "H_rms.npy", H_rms)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "H_bias.npy", H_bias)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "D_bin.npy", D_bin)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "D_rms.npy", D_rms)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "D_bias.npy", D_bias)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "F_bin.npy", F_bin)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "F_rms.npy", F_rms)
-        np.save('./results/plot/' + name + str(ensemble_runs) + "F_bias.npy", F_bias)
+
 
     @staticmethod
     def calc_stats(img_batch, label_batch):
